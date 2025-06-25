@@ -1,0 +1,1975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xannie's Client Manager</title>
+    <link rel="icon" id="favicon" href="">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-color: #0d0d0f;
+            --surface-color: rgba(26, 26, 29, 0.5);
+            --outline-color: rgba(0, 191, 255, 0.2);
+            --primary-accent: #00bfff;
+            --primary-accent-rgb: 0, 191, 255;
+            --secondary-accent: #4800ff;
+            --glow-color: rgba(var(--primary-accent-rgb), 0.5);
+            --text-color: #e0e0e0;
+            --text-muted: #888;
+            --text-bright: #fff;
+            --success-color: #00ff7f;
+            --warning-color: #ff4500;
+            --danger-color: #ff0000;
+            --receipt-success-color: #00b359;
+            --receipt-warning-color: #cc3700;
+            --font-main: 'Roboto Mono', monospace;
+            --font-display: 'Orbitron', sans-serif;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --border-radius: 12px;
+            --backdrop-blur: 12px;
+            --scrollbar-track-color: rgba(var(--primary-accent-rgb), 0.1);
+            --scrollbar-thumb-color: var(--primary-accent);
+            --scrollbar-thumb-hover-color: var(--secondary-accent);
+        }
+
+        body, .panel-content, .theme-panel-content, .card-clone, .print-preview-content, #saved-themes-list, #client-list {
+            scrollbar-width: thin;
+            scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
+        }
+        body::-webkit-scrollbar, .panel-content::-webkit-scrollbar,
+        .theme-panel-content::-webkit-scrollbar, .card-clone::-webkit-scrollbar,
+        .print-preview-content::-webkit-scrollbar, #saved-themes-list::-webkit-scrollbar, #client-list::-webkit-scrollbar {
+            width: 10px; height: 10px;
+        }
+        body::-webkit-scrollbar-track, .panel-content::-webkit-scrollbar-track,
+        .theme-panel-content::-webkit-scrollbar-track, .card-clone::-webkit-scrollbar-track,
+        .print-preview-content::-webkit-scrollbar-track, #saved-themes-list::-webkit-scrollbar-track, #client-list::-webkit-scrollbar-track {
+            background: var(--scrollbar-track-color); border-radius: 10px;
+        }
+        body::-webkit-scrollbar-thumb, .panel-content::-webkit-scrollbar-thumb,
+        .theme-panel-content::-webkit-scrollbar-thumb, .card-clone::-webkit-scrollbar-thumb,
+        .print-preview-content::-webkit-scrollbar-thumb, #saved-themes-list::-webkit-scrollbar-thumb, #client-list::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb-color); border-radius: 10px; border: 2px solid var(--scrollbar-track-color);
+        }
+        body::-webkit-scrollbar-thumb:hover, .panel-content::-webkit-scrollbar-thumb:hover,
+        .theme-panel-content::-webkit-scrollbar-thumb:hover, .card-clone::-webkit-scrollbar-thumb:hover,
+        .print-preview-content::-webkit-scrollbar-thumb:hover, #saved-themes-list::-webkit-scrollbar-thumb:hover, #client-list::-webkit-scrollbar-thumb:hover {
+            background: var(--scrollbar-thumb-hover-color);
+        }
+
+        body { font-family: var(--font-main); background-color: var(--bg-color); color: var(--text-color); min-height: 100vh; background-image: linear-gradient(rgba(var(--primary-accent-rgb), 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--primary-accent-rgb), 0.05) 1px, transparent 1px); background-size: 35px 35px; overflow-x: hidden; }
+
+        @keyframes expand-in {
+            from { transform: scaleX(0); opacity: 0; }
+            to { transform: scaleX(1); opacity: 1; }
+        }
+
+        #paper-logo-container { position: fixed; top: 20px; left: 30px; z-index: 100; transition: transform 0.4s ease; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+        #paper-logo-container.scrolled { transform: translateX(calc(-100% - 40px)); }
+        
+        #paper-logo, #earnings-widget, #combined-earnings-widget {
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            transform-origin: center center;
+            opacity: 0; 
+            transform: scaleX(0);
+        }
+        #paper-logo.is-editing-clone { transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+
+        #paper-logo.intro-anim, #earnings-widget.intro-anim, #combined-earnings-widget.intro-anim {
+            transform-origin: left center;
+            animation-name: expand-in;
+            animation-duration: 0.5s;
+            animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation-fill-mode: forwards;
+        }
+        #paper-logo.intro-anim { animation-delay: 0.2s; }
+        #earnings-widget.intro-anim { animation-delay: 0.3s; }
+        #combined-earnings-widget.intro-anim { animation-delay: 0.4s; }
+        
+        #paper-logo, #earnings-widget, #combined-earnings-widget .flipper div, #paper-logo.is-editing-clone { 
+            background: #e8e8e8; color: #1a1a1a; 
+        }
+        
+        #paper-logo { 
+            width: 170px; height: 55px; display: flex; align-items: center; justify-content: center; 
+            font-family: var(--font-display); font-size: 1.8rem; font-weight: 900; letter-spacing: 0.1em;
+            padding: 0 20px; text-transform: uppercase; white-space: nowrap;
+            clip-path: polygon(5% 0, 15% 5%, 25% 0, 35% 5%, 45% 0, 55% 5%, 65% 0, 75% 5%, 85% 0, 95% 5%, 100% 0, 100% 15%, 98% 25%, 100% 35%, 97% 45%, 100% 55%, 98% 65%, 100% 75%, 97% 85%, 100% 100%, 95% 95%, 85% 100%, 75% 95%, 65% 100%, 55% 95%, 45% 100%, 35% 95%, 25% 100%, 15% 95%, 5% 100%, 0% 95%, 5% 85%, 0% 75%, 5% 65%, 0% 55%, 5% 45%, 0% 35%, 5% 25%, 0% 15%);
+            cursor: pointer;
+            user-select: none;
+            transition-delay: 150ms;
+        }
+        
+        #earnings-widget { 
+            width: 210px; padding: 8px 15px; font-family: var(--font-main);
+            clip-path: polygon(0% 5%, 10% 0, 20% 6%, 30% 0, 20% 4%, 50% 0, 60% 5%, 70% 0, 80% 6%, 90% 0, 100% 5%, 100% 10%, 98% 20%, 100% 30%, 97% 45%, 100% 60%, 98% 70%, 100% 80%, 97% 90%, 100% 95%, 90% 100%, 80% 94%, 70% 100%, 60% 95%, 50% 100%, 40% 96%, 30% 100%, 20% 94%, 10% 100%, 0% 95%, 5% 80%, 0% 70%, 4% 60%, 0% 50%, 5% 40%, 0% 30%, 4% 20%);
+            transition-delay: 100ms;
+        }
+        
+        #combined-earnings-widget {
+            width: 175px; height: 65px;
+            font-family: var(--font-main);
+            perspective: 1000px;
+            cursor: pointer;
+            background: transparent;
+            transition-delay: 50ms;
+        }
+
+        #combined-earnings-widget .flipper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        #combined-earnings-widget .flipper.flipped {
+            transform: rotateY(180deg);
+        }
+        #combined-earnings-widget .front-face,
+        #combined-earnings-widget .back-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 8px 15px;
+            clip-path: polygon(0% 0, 15% 4%, 30% 0, 45% 5%, 60% 0, 75% 4%, 90% 0, 100% 3%, 100% 30%, 96% 50%, 100% 70%, 97% 90%, 100% 100%, 85% 96%, 70% 100%, 55% 95%, 40% 100%, 25% 96%, 10% 100%, 0% 97%, 0% 70%, 4% 50%, 0% 30%);
+        }
+        #combined-earnings-widget .front-face {
+            transform: translateZ(1px);
+        }
+        #combined-earnings-widget .back-face {
+            transform: rotateY(180deg) translateZ(1px);
+        }
+        
+        #paper-logo-container.scrolled #paper-logo {
+            transform: rotate(720deg) scale(0.8);
+        }
+        #paper-logo-container.scrolled #earnings-widget, 
+        #paper-logo-container.scrolled #combined-earnings-widget { 
+            transform: rotate(-720deg) scale(0.8); 
+        }
+        
+        #earnings-widget h4, #combined-earnings-widget h4 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; opacity: 0.7; }
+        .earnings-currency-line { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; }
+        #combined-earnings-widget .earnings-currency-line { font-size: 1.1rem; justify-content: center; }
+
+        .container { max-width: 1600px; margin: 0 auto; padding: 120px 40px 140px 40px; position: relative; overflow: hidden; transition: filter 0.3s ease-out; }
+        .container.editing-username, .container.panel-open-blur { filter: blur(5px) brightness(0.6); }
+
+        .client-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; }
+        .client-grid.modal-open { filter: blur(8px) brightness(0.7); transition: filter 0.4s ease; }
+        .client-grid .original-card { opacity: 0 !important; transform: scale(0.95) !important; pointer-events: none; }
+        .client-card.highlight { animation: pulse-highlight 1.2s cubic-bezier(0.22, 1, 0.36, 1); }
+        @keyframes pulse-highlight { 0% { box-shadow: 0 0 0 0 rgba(var(--primary-accent-rgb), 0); border-color: rgba(var(--primary-accent-rgb), 0.4); } 40% { box-shadow: 0 0 35px 5px rgba(var(--primary-accent-rgb), 0.4); border-color: rgba(var(--primary-accent-rgb), 0.8); } 100% { box-shadow: 0 0 0 0 rgba(var(--primary-accent-rgb), 0); border-color: rgba(var(--primary-accent-rgb), 0.4); } }
+
+
+        @keyframes cardSwayOut { 0% { transform: translateX(0) scale(1) rotate(0deg); filter: blur(0); opacity: 1; } 100% { transform: translateX(-50px) scale(0.9) rotate(-3deg); filter: blur(5px); opacity: 0; } }
+        .card-disappear-animation { animation: cardSwayOut 0.4s forwards cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+
+        @keyframes cardFilterInSharper { from { opacity: 0; transform: translateY(20px) scale(0.9) rotate(1.5deg); filter: blur(1.5px); } to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); filter: blur(0); } }
+        .card-pop-in { animation: cardFilterInSharper 0.30s forwards cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        .glass-ui { background: var(--surface-color); border: 1px solid var(--outline-color); border-radius: var(--border-radius); backdrop-filter: blur(var(--backdrop-blur)); -webkit-backdrop-filter: blur(var(--backdrop-blur)); box-shadow: 0 8px 32px var(--shadow-color); transition: all 0.3s ease-out; }
+
+        .client-card { position: relative; padding: 25px; display: flex; flex-direction: column; overflow: hidden; cursor: pointer; }
+        .client-card:hover, .card-clone:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 0 25px rgba(var(--primary-accent-rgb), 0.2); border-color: rgba(var(--primary-accent-rgb), 0.4); }
+
+        .shine-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent); background-size: 250% 100%; z-index: 1; pointer-events: none; opacity: 0; border-radius: inherit; }
+        @keyframes shine-ltr { from { background-position: -150% center; opacity: 1; } to { background-position: 150% center; opacity: 1; } }
+        @keyframes shine-rtl { from { background-position: 150% center; opacity: 1; } to { background-position: -150% center; opacity: 1; } }
+
+        .client-header, .stat-grid, .client-notes, .card-actions, .card-btn { position: relative; z-index: 2; }
+        .client-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 15px; }
+        .client-name-block { flex-grow: 1; }
+        .client-name { font-family: var(--font-display); font-size: 1.5rem; color: var(--text-bright); font-weight: 700; word-break: break-word; }
+        .project-description { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; font-style: italic; }
+        .client-status { font-size: 0.8rem; padding: 4px 12px; border-radius: 20px; color: var(--text-bright); text-transform: uppercase; font-weight: 700; flex-shrink: 0; margin-bottom: 5px; }
+        .status-not-started { background: #555; } .status-in-progress { background: #ffa500; color: #111;} .status-finished { background: var(--success-color); color: #111; }
+
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; border-top: 1px solid var(--outline-color); padding-top: 20px; }
+        .stat-item h4 { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; margin-bottom: 4px; }
+        .stat-item p { font-size: 1.2rem; font-weight: 700; word-break: break-word; overflow-wrap: break-word; line-height: 1.3; }
+        .stat-item .amount-paid, .stat-item .tip-amount { color: var(--success-color); } .stat-item .amount-due { color: var(--warning-color); }
+        .client-notes { font-size: 0.9rem; line-height: 1.6; border-top: 1px solid var(--outline-color); padding-top: 15px; white-space: pre-wrap; word-break: break-word; flex-grow: 1; color: var(--text-color); }
+
+        .card-actions { display: flex; gap: 10px; margin-top: 20px; opacity: 0.5; transition: opacity 0.3s; }
+        .client-card:hover .card-actions { opacity: 1; }
+        .card-btn { flex: 1; background: rgba(var(--primary-accent-rgb), 0.1); border: 1px solid var(--outline-color); color: var(--text-muted); padding: 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit; font-size: 0.9rem; }
+        .card-btn:hover { background: var(--primary-accent); color: #111; font-weight: 700; border-color: var(--primary-accent); }
+        .card-btn.delete:hover { background: var(--warning-color); border-color: var(--warning-color); }
+
+        .add-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; text-align: center; color: var(--text-muted); cursor: pointer; border-style: dashed; transition: all 0.3s ease; }
+        .add-placeholder:hover { border-color: var(--primary-accent); color: var(--text-color); }
+        .add-placeholder .fa-plus { font-size: 3rem; margin-bottom: 20px; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(var(--primary-accent-rgb), 0.1); transition: all 0.3s ease; }
+        .add-placeholder:hover .fa-plus { background: var(--primary-accent); color: var(--bg-color); transform: scale(1.1) rotate(90deg); }
+
+        #dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); height: 65px; display: flex; align-items: center; padding: 0 20px; gap: 15px; z-index: 2000; }
+        [data-tooltip] { position: relative; }
+        [data-tooltip]::after { content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #111; color: var(--text-bright); border: 1px solid var(--primary-accent); padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; font-family: var(--font-main); white-space: nowrap; pointer-events: none; opacity: 0; visibility: hidden; transition: all 0.2s; }
+        [data-tooltip]:hover::after { opacity: 1; visibility: visible; bottom: 130%; }
+
+        .dock-item { background: none; border: none; color: var(--text-muted); font-size: 1.6rem; width: 50px; height: 50px; cursor: pointer; transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); display: flex; align-items: center; justify-content: center; position: relative; }
+        .dock-item:hover, .dock-item.active { color: var(--primary-accent); transform: translateY(-8px) scale(1.2); text-shadow: 0 0 15px var(--glow-color); }
+
+        .panel { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1000; pointer-events: none; opacity: 0; transition: opacity 0.3s ease; }
+        .panel.visible { pointer-events: all; opacity: 1; }
+        #form-panel .panel-content, #client-list-panel .panel-content { max-width: 800px; }
+        .panel-content { width: 90%; max-width: 500px; padding: 30px; transform: scale(0.95); transition: transform 0.3s ease; position: relative; max-height: 85vh; overflow-y: auto;}
+        .panel.visible .panel-content { transform: scale(1); }
+        .panel-content h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.8rem; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 1px solid var(--primary-accent); color: var(--text-bright); }
+        .panel-close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; transition: color 0.2s; z-index: 10; }
+        .panel-close-btn:hover { color: var(--primary-accent); }
+
+        #client-list { max-height: 50vh; overflow-y: auto; margin-top: 20px; }
+        .client-list-item { padding: 12px 15px; border-radius: 8px; border: 1px solid transparent; transition: all 0.2s ease; cursor: pointer; }
+        .client-list-item:hover { background-color: rgba(var(--primary-accent-rgb), 0.1); border-color: rgba(var(--primary-accent-rgb), 0.3); }
+        .client-list-item h5 { font-family: var(--font-display); font-size: 1.1rem; color: var(--text-bright); }
+        .client-list-item p { font-size: 0.85rem; color: var(--text-muted); }
+        #search-client-input { margin-bottom: 20px; }
+
+
+        .theme-panel-content { position: fixed; right: -320px; top: 0; height: 100%; width: 300px; padding: 25px; z-index: 1001; transition: right 0.4s ease; backdrop-filter: none; background: #0a0a0c; border:none; border-left: 1px solid var(--outline-color); box-shadow: none; overflow-y: auto;}
+        .theme-panel-content.visible { right: 0; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+        .form-group, .form-row { margin-bottom: 20px; grid-column: span 2; }
+        .form-row .form-group { grid-column: auto; margin-bottom: 0; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-end; }
+        #clientForm button[type="submit"] { grid-column: span 2; }
+
+        .number-input-wrapper { position: relative; display: flex; align-items: center; gap: 10px; }
+        .number-input-wrapper input[type="number"] { flex-grow: 1; }
+        
+        .form-group.read-only p { font-size: 1.1rem; font-weight: 500; color: var(--text-bright); padding: 10px 12px; background: rgba(0,0,0,0.25); border-radius: 6px; }
+        .form-group.read-only p.form-paid-amount { color: var(--success-color); }
+        .form-group.read-only p.tip-amount { color: var(--success-color); }
+        .form-group.read-only p.due-amount-warning { color: var(--warning-color); }
+        .form-group.read-only p.due-amount-ok { color: var(--success-color); }
+
+        .form-section-divider { border-top: 1px dashed var(--outline-color); margin: 25px 0; padding-top: 15px; grid-column: span 2; }
+        .form-section-divider h4 { font-size: 1rem; color: var(--text-muted); margin-bottom: 15px; }
+
+        label { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; display: block; }
+        input, select, textarea { width: 100%; background: #101012; color: var(--text-color); border: 1px solid var(--outline-color); border-radius: 6px; padding: 12px; font-family: inherit; transition: all 0.2s; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-accent); box-shadow: 0 0 10px var(--glow-color); }
+        input[type="date"] { color-scheme: dark; }
+
+        input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+        .custom-number-arrows { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .custom-number-arrows span {
+            width: 24px; height: 24px; background-color: rgba(var(--primary-accent-rgb), 0.15); border: 1px solid var(--outline-color);
+            color: var(--primary-accent); display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; line-height: 1; border-radius: 50%; cursor: pointer; transition: all 0.2s; user-select: none;
+        }
+        .custom-number-arrows span:first-child { margin-bottom: 5px; }
+        .custom-number-arrows span:hover { background-color: rgba(var(--primary-accent-rgb), 0.3); border-color: var(--primary-accent); }
+
+        .date-input-wrapper { position: relative; display: flex; align-items: center; }
+        .date-input-wrapper input[type="date"] { flex-grow: 1; padding-right: 35px; }
+        .date-input-wrapper input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; position: absolute; right: 0; top:0; width: 100%; height: 100%; cursor: pointer; }
+        .date-picker-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--primary-accent); pointer-events: none; }
+
+        textarea { min-height: 100px; resize: vertical; }
+
+        .btn-primary { width: 100%; padding: 12px; font-size: 1rem; font-weight: 700; background: var(--primary-accent); color: #111; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { box-shadow: 0 0 15px var(--glow-color); }
+        .color-option { margin-bottom: 15px; }
+        .color-option input[type="color"] { width: 100%; height: 40px; padding: 2px; background: none; border: 1px solid var(--outline-color); border-radius: 6px;}
+        .color-option input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-option input[type="color"]::-webkit-color-swatch { border-radius: 4px; border: none; }
+
+        #filter-area-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        #filter-bar { 
+            padding-bottom: 15px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 12px; 
+            transform: translateY(-100%); 
+            opacity: 0; 
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.3s ease-out; 
+            transform-origin: top center; 
+            pointer-events: none; 
+        }
+        #filter-bar.visible { 
+            transform: translateY(0); 
+            opacity: 1; 
+            pointer-events: all; 
+        }
+
+        .filter-control-group, #search-container { 
+            background: rgba(30, 30, 30, 0.8); 
+            border: 1px solid var(--outline-color); 
+            border-radius: 10px; 
+            display: flex; 
+            align-items: center;
+            padding: 5px; 
+            height: 48px; 
+        }
+        .filter-btn { 
+            background: transparent; 
+            border: none; 
+            color: var(--text-muted); 
+            padding: 0 15px; 
+            height: 38px; 
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer; 
+            font-family: inherit; 
+            font-size: 0.9rem; 
+            border-radius: 6px; 
+            transition: all 0.2s; 
+        }
+        .filter-btn.active { 
+            background: var(--primary-accent); 
+            color: var(--bg-color); 
+            font-weight: 700; 
+        }
+        .file-input { 
+            display: none; 
+        }
+
+        #search-container {
+            position: relative;
+            transition: all 0.4s ease;
+        }
+        #search-toggle-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            width: 38px; 
+            height: 38px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #search-toggle-btn:hover {
+            color: var(--primary-accent);
+        }
+
+        #main-grid-search {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            width: 0;
+            padding: 0;
+            margin: 0;
+            height: 38px;
+            font-size: 0.9rem;
+            transition: width 0.4s ease, padding 0.4s ease;
+        }
+        #main-grid-search:focus {
+            outline: none;
+        }
+        #main-grid-search-clear {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--primary-accent);
+            font-size: 1.4rem;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        #search-container.active {
+            box-shadow: inset 0 0 15px -5px rgba(var(--primary-accent-rgb), 0.3);
+        }
+        #search-container.active #search-toggle-btn {
+            width: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #search-container.active #main-grid-search {
+            width: 250px;
+            padding: 8px 35px 8px 15px; 
+        }
+        #search-container.active #main-grid-search-clear {
+            opacity: 0.7;
+            pointer-events: all;
+        }
+        #search-container.active #main-grid-search-clear:hover {
+            opacity: 1;
+        }
+        #search-info-display {
+            background: rgba(30, 30, 30, 0.8);
+            border: 1px solid var(--outline-color);
+            border-radius: 10px;
+            padding: 13px 25px;
+            width: fit-content;
+            max-width: 90%;
+            display: none; 
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease-out;
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        #search-info-display.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        #search-info-display span {
+            word-break: break-all;
+        }
+        #search-info-display span strong {
+            color: var(--primary-accent);
+            font-weight: 700;
+        }
+        #search-info-clear {
+            background: rgba(var(--primary-accent-rgb), 0.1);
+            border: 1px solid rgba(var(--primary-accent-rgb), 0);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        #search-info-clear i {
+            font-size: 0.9em;
+            color: var(--primary-accent);
+        }
+        #search-info-clear:hover {
+            background: rgba(var(--primary-accent-rgb), 0.2);
+            color: var(--text-color);
+        }
+
+        #payment-method-suggestions { position: absolute; background: var(--bg-color); border: 1px solid var(--outline-color); border-top: none; border-radius: 0 0 var(--border-radius) var(--border-radius); width: calc(100% - 2px); left: 1px; top: 100%; z-index: 10; max-height: 150px; overflow-y: auto; box-shadow: 0 8px 16px rgba(0,0,0,0.3); }
+        .suggestion-bubble { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background-color 0.2s; }
+        .suggestion-bubble:hover { background-color: rgba(var(--primary-accent-rgb), 0.1); }
+        .suggestion-bubble img { width: 20px; height: 20px; object-fit: contain; }
+
+        #modal-overlay { position: fixed; inset: 0; background: rgba(13, 13, 15, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 3000; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+        #modal-overlay.visible { opacity: 1; pointer-events: all; }
+        .card-clone { position: absolute; cursor: default !important; z-index: 3001; transition: all 0.5s cubic-bezier(0.65, 0, 0.35, 1); max-height: 90vh; overflow-y: auto; padding-bottom: 70px; }
+        #modal-overlay .client-name { font-size: 2rem; }
+        #modal-overlay .stat-item p { font-size: 1.5rem; }
+        #modal-overlay .card-actions { display: none; }
+        .expanded-card-actions { position: absolute; bottom: 15px; left: 15px; right: 15px; z-index: 10; }
+
+        .payment-history-table { width: 100%; margin-top: 15px; border-collapse: collapse; table-layout: fixed; }
+        .payment-history-table th, .payment-history-table td { text-align: left; padding: 8px; border-bottom: 1px solid var(--outline-color); font-size: 0.9rem; word-break: break-word; vertical-align: middle; }
+        .payment-history-table th { color: var(--text-muted); }
+        .payment-method-cell { display: flex; align-items: center; gap: 8px; }
+        .payment-icon { width: 20px; height: 20px; object-fit: contain; }
+
+        #print-preview-modal { position: fixed; inset: 0; background: rgba(13, 13, 15, 0.9); z-index: 4000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        #print-preview-modal.visible { opacity: 1; pointer-events: all; }
+        .print-preview-content { background: #f0f0f0; color: #1a1a1a; padding: 0; border-radius: var(--border-radius); width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; font-family: 'Arial', sans-serif; }
+        .print-preview-render-area { padding: 30px; }
+        .print-preview-header { padding: 20px 30px; text-align: center; border-bottom: 2px solid #ddd; background-color: #f8f8f8; border-radius: var(--border-radius) var(--border-radius) 0 0;}
+        .print-preview-logo { font-family: var(--font-display); font-size: 2rem; color: var(--primary-accent); text-transform: uppercase; }
+        .print-preview-content h2 { color: #111; border-bottom: none; padding-bottom: 0; margin-top: 5px;}
+        .print-section { margin: 25px 0; }
+        .print-section h3 { font-size: 1rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+        .print-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9rem; table-layout: fixed; }
+        .print-table th, .print-table td { padding: 10px; border-bottom: 1px solid #e5e5e5; text-align: left; word-break: break-word; vertical-align: middle; }
+        .print-table th { background-color: #f2f2f2; color: #444; }
+        .print-table tr:last-child td { border-bottom: none; }
+        
+        .print-total-section { padding-top: 20px; margin-top: 20px; border-top: 2px dashed #ccc;}
+        .print-total { display: flex; justify-content: space-between; font-weight: bold; font-size: 1rem; margin-top: 8px; }
+        .print-total span:first-child { color: #555; font-weight: normal; }
+        .print-total.receipt-success span:last-child { color: var(--receipt-success-color); }
+        .print-total.receipt-warning span:last-child { color: var(--receipt-warning-color); }
+        .payment-icon-print { vertical-align: middle; width: 18px; height: 18px; margin-right: 6px; }
+        
+        .print-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end; padding: 20px 30px; border-top: 1px solid #ddd;}
+        .print-actions button { padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+        .print-actions .download-btn { background-color: var(--primary-accent); color: #111; }
+        .print-actions .copy-btn { background-color: var(--success-color); color: #111; }
+        .print-actions .cancel-btn { background-color: #aaa; color: #fff; }
+        
+        #saved-themes-list { margin-top: 20px; max-height: 200px; overflow-y: auto; padding-right: 5px; }
+        #saved-themes-list h4 { font-size: 1rem; color: var(--text-muted); margin-bottom: 10px; }
+        .saved-theme-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 10px; background: rgba(var(--primary-accent-rgb),0.05); border-radius: 6px; border: 1px solid var(--outline-color); }
+        .saved-theme-item .swatch { width: 24px; height: 24px; border-radius: 4px; margin-right: 10px; border: 1px solid var(--outline-color); }
+        .saved-theme-item .name { flex-grow: 1; color: var(--text-color); font-size: 0.9rem; }
+        .saved-theme-item .actions button { background: none; border: 1px solid var(--outline-color); color: var(--text-muted); padding: 5px 8px; border-radius: 4px; cursor: pointer; margin-left: 5px; transition: all 0.2s; }
+        .saved-theme-item .actions button:hover { border-color: var(--primary-accent); color: var(--primary-accent); }
+        .saved-theme-item .actions button.delete:hover { border-color: var(--danger-color); color: var(--danger-color); }
+
+        #welcome-overlay {
+            position: fixed; inset: 0; z-index: 5000;
+            background: rgba(13, 13, 15, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center;
+        }
+        #welcome-panel { text-align: center; }
+        #welcome-panel h2 { font-size: 2.2rem; }
+        #welcome-panel p { color: var(--text-muted); margin: -15px 0 25px 0; font-size: 1rem; }
+        #welcome-form { display: flex; flex-direction: column; gap: 15px; }
+
+        #fee-warning-banner {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translate(-50%, -150%);
+            z-index: 4500;
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            max-width: 90%;
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        #fee-warning-banner.visible {
+            transform: translate(-50%, 0);
+        }
+        #fee-warning-banner.retracting {
+            transform: translate(-50%, -150%);
+        }
+        #fee-warning-banner p { font-size: 0.9rem; color: var(--text-color); line-height: 1.5; }
+        #fee-warning-banner p strong { color: var(--primary-accent); }
+        .fee-warning-actions { display: flex; gap: 10px; }
+        .fee-warning-actions button { background: rgba(var(--primary-accent-rgb), 0.1); border: 1px solid var(--outline-color); color: var(--text-muted); padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit; font-size: 0.85rem; white-space: nowrap;}
+        .fee-warning-actions button:hover { background: var(--primary-accent); color: #111; font-weight: 700; border-color: var(--primary-accent); }
+        
+        #username-change-overlay {
+            position: fixed; inset: 0; z-index: 6000;
+            display: none; align-items: center; justify-content: center;
+            perspective: 1200px;
+        }
+        #paper-logo.is-editing-clone {
+            z-index: 6001;
+            outline: none;
+            cursor: text;
+        }
+        #paper-logo.is-editing {
+            animation: gentle-tilt 12s ease-in-out infinite;
+        }
+        @keyframes gentle-tilt {
+            0%   { transform: translate(-50%, -50%) scale(1.3) rotateY(0deg) rotateX(0deg); }
+            25%  { transform: translate(-50%, -50%) scale(1.3) rotateY(-10deg) rotateX(5deg); }
+            50%  { transform: translate(-50%, -50%) scale(1.3) rotateY(0deg) rotateX(-5deg); }
+            75%  { transform: translate(-50%, -50%) scale(1.3) rotateY(10deg) rotateX(5deg); }
+            100% { transform: translate(-50%, -50%) scale(1.3) rotateY(0deg) rotateX(0deg); }
+        }
+
+        @media (max-width: 768px) {
+            body { font-size: 15px; }
+            .container { padding: 100px 15px 120px 15px; }
+            #paper-logo-container { flex-direction: row; align-items: center; left: 50%; transform: translateX(-50%); }
+            #paper-logo-container.scrolled { transform: translateX(-50%) translateY(-150px); }
+            .panel-content, #form-panel .panel-content { width: 95%; max-width: 95%; }
+            #form-panel .panel-content .form-grid, #form-panel .panel-content .form-row { grid-template-columns: 1fr; gap: 0; }
+            #form-panel .panel-content .form-group { grid-column: auto; margin-bottom: 20px; }
+
+            .client-grid { grid-template-columns: 1fr; gap: 20px; }
+            .theme-panel-content { width: 90%; right: -100vw; left:auto; transform: translateX(100%);}
+            .theme-panel-content.visible { right: 0; transform: translateX(0); left:0; margin-left:auto; margin-right:auto; max-width: 300px;}
+            #dock { gap: 8px; padding: 0 10px; height: 60px; }
+            .dock-item { width: 45px; height: 45px; font-size: 1.4rem; }
+            [data-tooltip]::after { display: none; }
+            #filter-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+            #search-container { margin-left: 0; }
+            .print-preview-content { width: 95%; padding:0; }
+            .print-preview-render-area { padding: 20px; }
+            .print-actions { padding: 0 20px 20px 20px; flex-direction: column; gap: 8px; }
+            .print-actions button { width: 100%; }
+            #fee-warning-banner { flex-direction: column; text-align: center; }
+        }
+
+        @media (max-width: 480px) {
+            body { font-size: 14px; }
+            #paper-logo-container { display: none; }
+            .client-name { font-size: 1.2rem; }
+            .project-description { font-size: 0.75rem; }
+            .stat-item h4 { font-size: 0.75rem; }
+            .stat-item p { font-size: 1rem; }
+            #dock { height: 55px; }
+            .dock-item { width: 40px; height: 40px; font-size: 1.3rem; }
+            .number-input-wrapper { flex-direction: column; align-items: stretch; gap: 5px; }
+            .number-input-wrapper label {width: 100%; margin-bottom: 5px !important;}
+            .number-input-wrapper input[type="number"] {width: 100%;}
+            .custom-number-arrows { position: static; flex-direction: row; justify-content: space-around; margin-top: 8px; width:100%;}
+            .custom-number-arrows span:first-child { margin-bottom: 0; margin-right: 8px;}
+        }
+    </style>
+</head>
+<body>
+    <div id="fee-warning-banner" class="glass-ui">
+        <p><strong>Disclaimer:</strong> Fees shown are rough estimates and may not be accurate. For precise calculations, an external API integration is recommended.</p>
+        <div class="fee-warning-actions">
+            <button id="fee-warning-close">Close</button>
+            <button id="fee-warning-dont-show">Don't Show Again</button>
+        </div>
+    </div>
+
+    <div id="paper-logo-container">
+        <div id="paper-logo">XANNIE</div>
+        <div id="earnings-widget">
+            <h4>Net Earnings</h4>
+            <h4>Total Earnings</h4>
+            <div class="earnings-currency-line"><span>EUR:</span> <span id="earnings-eur">€0.00</span></div>
+            <div class="earnings-currency-line"><span>USD:</span> <span id="earnings-usd">$0.00</span></div>
+        </div>
+        <div id="combined-earnings-widget">
+             <div class="flipper">
+                <div class="front-face">
+                    <h4>Combined (EUR)</h4>
+                    <div class="earnings-currency-line"><span id="earnings-combined-eur">€0.00</span></div>
+                </div>
+                <div class="back-face">
+                    <h4>Combined (USD)</h4>
+                    <div class="earnings-currency-line"><span id="earnings-combined-usd">$0.00</span></div>
+                </div>
+             </div>
+        </div>
+    </div>
+
+    <div class="container" id="container">
+        <div id="filter-area-wrapper">
+            <div id="filter-bar">
+                <div class="filter-control-group" id="status-filter-group">
+                    <button class="filter-btn active" data-filter="status" data-value="all">All</button>
+                    <button class="filter-btn" data-filter="status" data-value="Not Started">Not Started</button>
+                    <button class="filter-btn" data-filter="status" data-value="In Progress">In Progress</button>
+                    <button class="filter-btn" data-filter="status" data-value="Finished">Finished</button>
+                </div>
+                <div class="filter-control-group" id="payment-filter-group">
+                    <button class="filter-btn active" data-filter="payment" data-value="all">All</button>
+                    <button class="filter-btn" data-filter="payment" data-value="Not Paid">Not Paid</button>
+                    <button class="filter-btn" data-filter="payment" data-value="Partially Paid">Partially Paid</button>
+                    <button class="filter-btn" data-filter="payment" data-value="Paid">Paid</button>
+                </div>
+                <div id="search-container">
+                    <button id="search-toggle-btn"><i class="fas fa-search"></i></button>
+                    <input type="text" id="main-grid-search" placeholder="Search...">
+                    <button id="main-grid-search-clear">&times;</button>
+                </div>
+            </div>
+            <div id="search-info-display">
+                <span>Showing projects for: <strong id="search-info-term"></strong></span>
+                <button id="search-info-clear"><i class="fas fa-times"></i> Clear Filter</button>
+            </div>
+        </div>
+        <div class="client-grid" id="client-grid"></div>
+    </div>
+
+    <div class="dock glass-ui" id="dock">
+        <button class="dock-item" id="addBtn" data-tooltip="Add New Client"><i class="fas fa-plus"></i></button>
+        <button class="dock-item" id="listBtn" data-tooltip="Client List"><i class="fas fa-list-ul"></i></button>
+        <button class="dock-item" id="themeBtn" data-tooltip="Theme Settings"><i class="fas fa-palette"></i></button>
+        <button class="dock-item" id="exportBtn" data-tooltip="Export Client Data"><i class="fas fa-file-export"></i></button>
+        <button class="dock-item" id="importBtn" data-tooltip="Import Client Data"><i class="fas fa-file-import"></i></button>
+    </div>
+
+    <div class="panel" id="form-panel">
+        <div class="panel-content glass-ui">
+            <button class="panel-close-btn" data-panel-id="form-panel"><i class="fas fa-times"></i></button>
+            <h2 id="form-panel-title">Add New Client</h2>
+            <form id="clientForm">
+                <input type="hidden" id="clientId">
+                <div class="form-grid">
+
+                    <div class="form-section-divider"><h4>Core Details</h4></div>
+                    <div class="form-group">
+                        <label for="clientName">Client Name</label>
+                        <input type="text" id="clientName" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="projectDescription">Project Type/Description</label>
+                        <input type="text" id="projectDescription" autocomplete="off">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="clientStatus">Status</label><select id="clientStatus"><option>Not Started</option><option>In Progress</option><option>Finished</option></select></div>
+                        <div class="form-group"><label for="clientCurrency">Currency</label><select id="clientCurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option></select></div>
+                    </div>
+                    
+                    <div class="form-section-divider"><h4>Financials</h4></div>
+                     <div class="form-row">
+                        <div class="form-group number-input-wrapper">
+                            <label for="totalAmount" id="totalAmountLabel">Total Project Amount</label>
+                            <input type="number" id="totalAmount" value="0" step="0.01" min="0" required>
+                            <div class="custom-number-arrows"> <span class="arrow-up"><i class="fas fa-chevron-up"></i></span> <span class="arrow-down"><i class="fas fa-chevron-down"></i></span> </div>
+                        </div>
+                        <div class="form-group number-input-wrapper">
+                            <label for="discountAmount" id="discountAmountLabel">Discount Amount</label>
+                            <input type="number" id="discountAmount" value="0" step="0.01" min="0" placeholder="0.00">
+                            <div class="custom-number-arrows"> <span class="arrow-up"><i class="fas fa-chevron-up"></i></span> <span class="arrow-down"><i class="fas fa-chevron-down"></i></span> </div>
+                        </div>
+                     </div>
+                     <div class="form-row">
+                        <div class="form-group read-only"><p id="currentTotalPaidDisplay" class="form-paid-amount">€0.00</p></div>
+                        <div class="form-group read-only"><p id="currentTotalDueDisplay">Due: €0.00</p></div>
+                     </div>
+
+                    <div class="form-section-divider"><h4>Log New Payment</h4></div>
+                    <div class="form-group number-input-wrapper">
+                       <label for="newPaymentAmount" id="newPaymentAmountLabel">Payment Amount</label>
+                       <input type="number" id="newPaymentAmount" step="0.01" min="0" placeholder="0.00">
+                        <div class="custom-number-arrows"> <span class="arrow-up"><i class="fas fa-chevron-up"></i></span> <span class="arrow-down"><i class="fas fa-chevron-down"></i></span> </div>
+                   </div>
+                   <div class="form-row">
+                        <div class="form-group" style="position: relative;">
+                            <label for="newPaymentMethod">Payment Method</label>
+                            <input type="text" id="newPaymentMethod" placeholder="e.g., Paypal, Wise..." autocomplete="off">
+                            <div id="payment-method-suggestions" style="display:none;"></div>
+                        </div>
+                        <div class="form-group"><label for="newPaymentNote">Payment Note (Optional)</label><input type="text" id="newPaymentNote" placeholder="Payment added" autocomplete="off"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group read-only"><p id="paymentFeeDisplay" class="due-amount-warning">Fee: €0.00</p></div>
+                        <div class="form-group read-only"><p id="netPaymentDisplay" class="form-paid-amount">Net: €0.00</p></div>
+                    </div>
+
+                    <div class="form-section-divider"><h4>Dates & Notes</h4></div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="projectStartDate">Project Start Date</label><div class="date-input-wrapper"><input type="date" id="projectStartDate"><i class="fas fa-calendar-alt date-picker-icon"></i></div></div>
+                        <div class="form-group"><label for="projectFinishDate">Project Finish Date</label><div class="date-input-wrapper"><input type="date" id="projectFinishDate"><i class="fas fa-calendar-alt date-picker-icon"></i></div></div>
+                        <div class="form-group"><label for="deadline">Deadline</label><div class="date-input-wrapper"><input type="date" id="deadline"><i class="fas fa-calendar-alt date-picker-icon"></i></div></div>
+                    </div>
+                    <div class="form-group"><label for="clientNotes">General Notes</label><textarea id="clientNotes"></textarea></div>
+
+                    <button type="submit" class="btn-primary" id="submitBtn">Add Client</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="panel" id="client-list-panel">
+        <div class="panel-content glass-ui">
+            <button class="panel-close-btn" data-panel-id="client-list-panel"><i class="fas fa-times"></i></button>
+            <h2>Client List</h2>
+            <input type="text" id="search-client-input" placeholder="Search by name or project...">
+            <div id="client-list"></div>
+        </div>
+    </div>
+
+    <div class="theme-panel-content glass-ui" id="theme-panel">
+        <button class="panel-close-btn" data-panel-id="theme-panel"><i class="fas fa-times"></i></button>
+        <h2>Theme Settings</h2>
+        <div class="color-option"><label>Primary Accent</label><input type="color" id="primaryColorInput" class="color-input"></div>
+        <div class="color-option"><label>Secondary Accent</label><input type="color" id="secondaryColorInput" class="color-input"></div>
+        <div class="color-option"><label>Outline Color</label><input type="color" id="outlineColorInput" class="color-input"></div>
+        <div class="color-option"><label>Text Color</label><input type="color" id="textColorInput" class="color-input"></div>
+        <div class="color-option"><label>Muted Text Color</label><input type="color" id="textMutedInput" class="color-input"></div>
+        <div class="color-option"><label>Background Color</label><input type="color" id="bgColorInput" class="color-input"></div>
+
+        <button class="btn-primary" id="saveThemeBtn" style="margin-top:10px; margin-bottom:10px;">Save Current Theme</button>
+        <button class="btn-primary" id="resetThemeBtn" style="margin-top: 10px;">Reset to Default</button>
+        <div id="saved-themes-list"></div>
+    </div>
+
+    <div id="modal-overlay"></div>
+    <div id="print-preview-modal">
+        <div class="print-preview-content" id="print-preview-area">
+        </div>
+    </div>
+    <input type="file" id="importFile" class="file-input" accept=".xan,.voo">
+
+    <div id="welcome-overlay">
+        <div id="welcome-panel" class="panel-content glass-ui">
+            <h2>Welcome!</h2>
+            <p>Please enter your name to personalize the manager.</p>
+            <form id="welcome-form">
+                <input type="text" id="welcome-name-input" placeholder="Your Name" required autocomplete="off" style="text-align: center; font-size: 1.2rem;">
+                <button type="submit" class="btn-primary">Let's Go!</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="username-change-overlay"></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+    class ClientManager {
+        constructor() {
+            this.clients = [];
+            this.username = null;
+            this.isEditingUsername = false;
+            this.activeFilters = { status: 'all', payment: 'all' };
+            this.activeSearchTerm = '';
+            this.mouseDownTarget = null;
+            this.defaultTheme = {
+                '--primary-accent': '#00bfff', '--secondary-accent': '#4800ff',
+                '--outline-color': 'rgba(0, 191, 255, 0.2)',
+                '--text-color': '#e0e0e0', '--text-muted': '#888', '--bg-color': '#0d0d0f'
+            };
+            this.theme = this.loadData('xcm_theme_settings') || JSON.parse(JSON.stringify(this.defaultTheme));
+            this.savedThemes = this.loadData('xcm_saved_themes', []);
+            this.conversionRates = { EUR_USD: 1.08, USD_EUR: 1 / 1.08 };
+            this.animationLock = false;
+            this.predefinedPaymentMethods = [
+                { name: 'PayPal', icon: 'https://i.imgur.com/hjXqDn2.png', fee: { percentage: 4.4, flat: 0.30 } }, 
+                { name: 'Wise', icon: 'https://i.imgur.com/aKeNFaY.png', fee: { percentage: 0.6, flat: 7.00 } }, 
+                { name: 'Revolut', icon: 'https://i.imgur.com/53VYcIr.png', fee: { percentage: 5.0, flat: 10.00 } }, 
+                { name: 'Stripe', icon: 'https://i.imgur.com/3pZdAvc.png', fee: { percentage: 2.9, flat: 0.30 } }, 
+                { name: 'Bank Transfer', icon: 'https://i.imgur.com/zHRJ9V5.png', fee: { percentage: 0, flat: 40.00 } }, 
+                { name: 'Credit/Debit Card', icon: 'https://i.imgur.com/IAXK4fO.png', fee: { percentage: 2.9, flat: 0.30 } }, 
+                { name: 'Payoneer', icon: 'https://i.imgur.com/tMrZ5CO.png', fee: { percentage: 1.0, flat: 1.50 } }, 
+                { name: 'Crypto', icon: 'https://i.imgur.com/Nzzntfm.png', fee: { percentage: 0, flat: 1.06 } }, 
+                { name: 'Cash', icon: 'https://i.imgur.com/s9jsNEY.png', fee: { percentage: 0, flat: 0 } }, 
+            ];
+            this.dom = {
+                container: document.getElementById('container'),
+                clientGrid: document.getElementById('client-grid'),
+                dock: document.getElementById('dock'),
+                formPanel: document.getElementById('form-panel'),
+                clientListPanel: document.getElementById('client-list-panel'),
+                clientList: document.getElementById('client-list'),
+                searchClientInput: document.getElementById('search-client-input'),
+                themePanel: document.getElementById('theme-panel'),
+                clientForm: document.getElementById('clientForm'),
+                formTitle: document.getElementById('form-panel-title'),
+                submitBtn: document.getElementById('submitBtn'),
+                filterBar: document.getElementById('filter-bar'),
+                importFile: document.getElementById('importFile'),
+                modalOverlay: document.getElementById('modal-overlay'),
+                logoContainer: document.getElementById('paper-logo-container'),
+                paperLogo: document.getElementById('paper-logo'),
+                earningsWidget: document.getElementById('earnings-widget'),
+                combinedEarningsWidget: document.getElementById('combined-earnings-widget'),
+                printPreviewModal: document.getElementById('print-preview-modal'),
+                printPreviewArea: document.getElementById('print-preview-area'),
+                currentTotalPaidDisplay: document.getElementById('currentTotalPaidDisplay'),
+                currentTotalDueDisplay: document.getElementById('currentTotalDueDisplay'),
+                clientCurrencySelect: document.getElementById('clientCurrency'),
+                saveThemeBtn: document.getElementById('saveThemeBtn'),
+                savedThemesList: document.getElementById('saved-themes-list'),
+                newPaymentMethodInput: document.getElementById('newPaymentMethod'),
+                paymentMethodSuggestions: document.getElementById('payment-method-suggestions'),
+                earningsEur: document.getElementById('earnings-eur'),
+                earningsUsd: document.getElementById('earnings-usd'),
+                earningsCombinedEur: document.getElementById('earnings-combined-eur'),
+                earningsCombinedUsd: document.getElementById('earnings-combined-usd'),
+                paymentFeeDisplay: document.getElementById('paymentFeeDisplay'),
+                netPaymentDisplay: document.getElementById('netPaymentDisplay'),
+                searchContainer: document.getElementById('search-container'),
+                searchToggleBtn: document.getElementById('search-toggle-btn'),
+                mainGridSearch: document.getElementById('main-grid-search'),
+                mainGridSearchClear: document.getElementById('main-grid-search-clear'),
+                searchInfoDisplay: document.getElementById('search-info-display'),
+                searchInfoTerm: document.getElementById('search-info-term'),
+                searchInfoClear: document.getElementById('search-info-clear'),
+                welcomeOverlay: document.getElementById('welcome-overlay'),
+                welcomeForm: document.getElementById('welcome-form'),
+                feeWarningBanner: document.getElementById('fee-warning-banner'),
+                usernameChangeOverlay: document.getElementById('username-change-overlay'),
+            };
+            this.init();
+        }
+
+        init() {
+            this.applyTheme();
+            this.username = this.loadData('xcm_username', null);
+            this.dom.welcomeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const nameInput = document.getElementById('welcome-name-input');
+                let newName = nameInput.value.trim();
+                if (newName) {
+                    if (newName.length > 26) newName = newName.substring(0, 26);
+                    this.username = newName;
+                    this.saveData('xcm_username', this.username);
+                    this.dom.welcomeOverlay.style.display = 'none';
+                    this.completeInitialization();
+                }
+            });
+            
+            if (this.username) {
+                this.completeInitialization();
+            } else {
+                this.showWelcomeScreen();
+            }
+        }
+
+        completeInitialization() {
+            this.updatePaperLogo(this.dom.paperLogo, this.username);
+            this.triggerIntroAnimations();
+
+            if (!this.loadData('xcm_hide_fee_warning', false)) {
+                this.showFeeWarning();
+            }
+
+            this.clients = this.loadData('xcm_clients', []).map(client => ({
+                ...client,
+                currency: client.currency || 'EUR',
+                discountAmount: parseFloat(client.discountAmount || 0),
+                payments: (client.payments || []).map(p => ({...p, paymentMethod: p.paymentMethod || 'N/A', fee: p.fee || 0}))
+            }));
+            
+            this.renderSavedThemes();
+            this.bindEvents();
+            this.renderCurrentView(false); 
+            this.setupCustomNumberInputs(); 
+            this.updateEarningsWidget();
+            setTimeout(() => this.dom.filterBar.classList.add('visible'), 100);
+        }
+        
+        triggerIntroAnimations() {
+            const papers = [this.dom.paperLogo, this.dom.earningsWidget, this.dom.combinedEarningsWidget];
+            papers.forEach(p => {
+                p.classList.remove('intro-anim');
+                void p.offsetWidth;
+                p.classList.add('intro-anim');
+                p.addEventListener('animationend', () => {
+                    p.style.opacity = '1';
+                    p.style.transform = 'scaleX(1)';
+                    p.classList.remove('intro-anim');
+                }, { once: true });
+            });
+        }
+
+        bindEvents() {
+            window.addEventListener('scroll', () => this.handleScroll());
+            document.addEventListener('mousedown', e => { this.mouseDownTarget = e.target; });
+            document.addEventListener('mouseup', e => this.handleModalBackdropClick(e));
+
+            this.dom.dock.addEventListener('click', e => this.handleDockClick(e));
+            this.dom.clientForm.addEventListener('submit', e => this.handleFormSubmit(e));
+            this.dom.clientGrid.addEventListener('click', e => this.handleCardActions(e, 'client'));
+            this.dom.clientGrid.addEventListener('mouseover', e => this.handleCardHover(e));
+            this.dom.modalOverlay.addEventListener('mouseover', e => this.handleCardHover(e));
+            this.dom.filterBar.addEventListener('click', e => this.handleFilterButtonClick(e));
+            this.dom.searchClientInput.addEventListener('input', (e) => this.renderClientList(e.target.value));
+
+            document.getElementById('importBtn').addEventListener('click', () => this.dom.importFile.click());
+            this.dom.importFile.addEventListener('change', e => this.importData(e));
+            document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
+            document.querySelectorAll('.color-input').forEach(input => input.addEventListener('input', e => this.handleThemeChange(e)));
+            document.getElementById('resetThemeBtn').addEventListener('click', () => this.resetTheme());
+            this.dom.saveThemeBtn.addEventListener('click', () => this.saveCurrentTheme());
+
+            document.getElementById('clientCurrency').addEventListener('change', (e) => this.handleClientCurrencyChange(e.target.value));
+            document.querySelectorAll('#totalAmount, #discountAmount, #newPaymentAmount').forEach(input => {
+                if (input) input.addEventListener('input', () => this.updateLiveDueTipDisplay());
+            });
+
+            this.dom.newPaymentMethodInput.addEventListener('input', () => { this.showPaymentMethodSuggestions(this.dom.newPaymentMethodInput); this.updateLiveDueTipDisplay(); });
+            this.dom.newPaymentMethodInput.addEventListener('change', () => this.updateLiveDueTipDisplay());
+            this.dom.newPaymentMethodInput.addEventListener('focus', (e) => this.showPaymentMethodSuggestions(e.target, true));
+            
+            this.dom.searchToggleBtn.addEventListener('click', () => this.toggleSearch(true));
+            this.dom.mainGridSearch.addEventListener('input', () => this.handleGridSearch());
+            this.dom.mainGridSearchClear.addEventListener('click', () => this.clearGridSearch(false));
+            this.dom.searchInfoClear.addEventListener('click', () => this.clearGridSearch(false));
+            document.addEventListener('click', (e) => { 
+                if (!this.dom.searchContainer.contains(e.target) && this.dom.mainGridSearch.value.trim() === '') {
+                     this.toggleSearch(false);
+                }
+                if (!this.dom.newPaymentMethodInput.contains(e.target) && !this.dom.paymentMethodSuggestions.contains(e.target)) {
+                    this.dom.paymentMethodSuggestions.style.display = 'none';
+                }
+            });
+
+            this.dom.combinedEarningsWidget.addEventListener('click', () => {
+                this.dom.combinedEarningsWidget.querySelector('.flipper').classList.toggle('flipped');
+            });
+            
+            document.getElementById('fee-warning-close').addEventListener('click', () => this.handleFeeWarningDismiss(false));
+            document.getElementById('fee-warning-dont-show').addEventListener('click', () => this.handleFeeWarningDismiss(true));
+
+            this.dom.paperLogo.addEventListener('click', () => this.startUsernameEdit());
+            this.dom.usernameChangeOverlay.addEventListener('click', (e) => {
+                if (e.target === this.dom.usernameChangeOverlay) {
+                    this.endUsernameEdit();
+                }
+            });
+        }
+
+        startUsernameEdit() {
+            if (this.isEditingUsername) return;
+            this.isEditingUsername = true;
+
+            const originalLogo = this.dom.paperLogo;
+            const originalRect = originalLogo.getBoundingClientRect();
+            
+            const clone = originalLogo.cloneNode(true);
+            clone.style.position = 'fixed';
+            clone.style.top = `${originalRect.top}px`;
+            clone.style.left = `${originalRect.left}px`;
+            clone.style.width = `${originalRect.width}px`;
+            clone.style.height = `${originalRect.height}px`;
+            clone.style.margin = '0';
+            clone.style.transform = '';
+            clone.style.opacity = '1';
+            clone.classList.add('is-editing-clone');
+            
+            this.dom.usernameChangeOverlay.appendChild(clone);
+            this.dom.usernameChangeOverlay.style.display = 'flex';
+            this.dom.container.classList.add('editing-username');
+            originalLogo.style.visibility = 'hidden';
+
+            clone.addEventListener('input', () => {
+                let text = clone.textContent;
+                if (text.length > 26) {
+                    text = text.substring(0, 26);
+                    clone.textContent = text;
+                    const range = document.createRange();
+                    const sel = window.getSelection();
+                    range.selectNodeContents(clone);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+                this.updatePaperLogo(clone, text);
+            });
+            
+            clone.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.endUsernameEdit();
+                }
+            });
+
+            requestAnimationFrame(() => {
+                clone.style.top = '50%';
+                clone.style.left = '50%';
+                clone.style.transform = `translate(-50%, -50%) scale(1.3) rotateY(360deg)`;
+                
+                clone.addEventListener('transitionend', () => {
+                    clone.classList.add('is-editing');
+                    clone.contentEditable = 'true';
+                    clone.focus();
+                }, { once: true });
+            });
+        }
+
+        endUsernameEdit() {
+            if (!this.isEditingUsername) return;
+            const clone = document.querySelector('.is-editing-clone');
+            if (!clone) { this.isEditingUsername = false; return; }
+
+            this.isEditingUsername = false; 
+            clone.contentEditable = 'false';
+            
+            let newName = clone.textContent.trim();
+            if (newName.length > 26) newName = newName.substring(0, 26);
+
+            if (newName && newName !== this.username) {
+                this.username = newName;
+                this.saveData('xcm_username', this.username);
+            }
+            this.updatePaperLogo(this.dom.paperLogo, this.username);
+
+            clone.classList.remove('is-editing');
+
+            const originalRect = this.dom.paperLogo.getBoundingClientRect();
+            
+            requestAnimationFrame(() => {
+                clone.style.top = `${originalRect.top}px`;
+                clone.style.left = `${originalRect.left}px`;
+                clone.style.width = this.dom.paperLogo.style.width;
+                clone.style.height = this.dom.paperLogo.style.height;
+                clone.style.transform = `translate(0, 0) scale(1) rotateY(0deg)`;
+
+                clone.addEventListener('transitionend', () => {
+                    this.dom.paperLogo.style.visibility = 'visible';
+                    if (clone.parentNode) clone.remove();
+                    this.dom.usernameChangeOverlay.style.display = 'none';
+                    this.dom.container.classList.remove('editing-username');
+                }, { once: true });
+            });
+        }
+
+        updatePaperLogo(element, name) {
+            if (!element || typeof name !== 'string') return;
+            const tempSpan = document.createElement('span');
+            const logoStyle = getComputedStyle(element);
+            tempSpan.style.fontFamily = logoStyle.fontFamily;
+            tempSpan.style.fontSize = logoStyle.fontSize;
+            tempSpan.style.fontWeight = logoStyle.fontWeight;
+            tempSpan.style.letterSpacing = logoStyle.letterSpacing;
+            tempSpan.style.textTransform = logoStyle.textTransform;
+            tempSpan.style.visibility = 'hidden';
+            tempSpan.style.position = 'absolute';
+            tempSpan.textContent = name;
+            document.body.appendChild(tempSpan);
+            const textWidth = tempSpan.offsetWidth;
+            document.body.removeChild(tempSpan);
+            
+            const padding = 60;
+            element.style.width = `${textWidth + padding}px`;
+            if (element.textContent !== name) {
+                element.textContent = name;
+            }
+        }
+
+        showWelcomeScreen() {
+            this.dom.welcomeOverlay.style.display = 'flex';
+            document.getElementById('welcome-name-input').focus();
+        }
+        
+        showFeeWarning() {
+            const banner = this.dom.feeWarningBanner;
+            setTimeout(() => {
+                banner.classList.add('visible');
+            }, 500);
+        }
+
+        handleFeeWarningDismiss(permanently) {
+            const banner = this.dom.feeWarningBanner;
+            if (banner.classList.contains('visible')) {
+                banner.classList.add('retracting');
+                banner.classList.remove('visible');
+            }
+            if (permanently) {
+                this.saveData('xcm_hide_fee_warning', true);
+            }
+        }
+        
+        toggleSearch(forceState) {
+            const shouldBeActive = forceState !== undefined ? forceState : !this.dom.searchContainer.classList.contains('active');
+            this.dom.searchContainer.classList.toggle('active', shouldBeActive);
+            if(shouldBeActive) {
+                this.dom.mainGridSearch.focus();
+            }
+        }
+
+        handleGridSearch() {
+            this.activeSearchTerm = this.dom.mainGridSearch.value.trim();
+            this.updateSearchUI();
+            this.renderCurrentView(true);
+        }
+
+        clearGridSearch(focusInput = false) {
+            this.dom.mainGridSearch.value = '';
+            this.activeSearchTerm = '';
+            this.updateSearchUI();
+            this.renderCurrentView(true);
+            if (focusInput) {
+                this.dom.mainGridSearch.focus();
+            } else {
+                 this.toggleSearch(false);
+            }
+        }
+
+        updateSearchUI() {
+            const hasTerm = this.activeSearchTerm.length > 0;
+            
+            if (hasTerm) {
+                this.dom.searchInfoTerm.textContent = `"${this.activeSearchTerm}"`;
+                this.dom.searchInfoDisplay.style.display = 'inline-flex';
+                setTimeout(() => this.dom.searchInfoDisplay.classList.add('visible'), 10);
+            } else {
+                this.dom.searchInfoDisplay.classList.remove('visible');
+                const onTransitionEnd = () => {
+                    if (!this.dom.searchInfoDisplay.classList.contains('visible')) {
+                        this.dom.searchInfoDisplay.style.display = 'none';
+                    }
+                    this.dom.searchInfoDisplay.removeEventListener('transitionend', onTransitionEnd);
+                };
+                this.dom.searchInfoDisplay.addEventListener('transitionend', onTransitionEnd);
+            }
+        }
+
+        handleModalBackdropClick(e) {
+            if (this.mouseDownTarget !== e.target) { this.mouseDownTarget = null; return; }
+            const target = e.target;
+            const targetId = target.id;
+        
+            if (target.matches('.panel, #modal-overlay, #print-preview-modal, #welcome-overlay')) {
+                if (targetId === 'form-panel' || targetId === 'client-list-panel') this.togglePanel(targetId, false);
+                else if (targetId === 'theme-panel') this.togglePanel(targetId, false);
+                else if (targetId === 'modal-overlay') this.closeExpandedCard();
+                else if (targetId === 'print-preview-modal') target.classList.remove('visible');
+            } else if (target.closest('.panel-close-btn')) {
+                 this.togglePanel(target.closest('.panel-close-btn').dataset.panelId, false);
+            } else if (target.closest('.cancel-btn') && target.closest('#print-preview-modal')) {
+                this.dom.printPreviewModal.classList.remove('visible');
+            }
+            this.mouseDownTarget = null;
+        }
+
+        showPaymentMethodSuggestions(inputElement, onFocus = false) {
+            const value = inputElement.value.toLowerCase();
+            this.dom.paymentMethodSuggestions.innerHTML = '';
+            
+            const filteredMethods = this.predefinedPaymentMethods.filter(method => method.name.toLowerCase().includes(value));
+            const methodsToShow = (onFocus && value === '') ? this.predefinedPaymentMethods : filteredMethods;
+
+            if (methodsToShow.length > 0) {
+                methodsToShow.forEach(method => {
+                    const bubble = document.createElement('div');
+                    bubble.className = 'suggestion-bubble';
+                    bubble.innerHTML = `<img src="${method.icon}" alt="${method.name} icon" class="payment-icon"> <span>${method.name}</span>`;
+                    bubble.onclick = () => {
+                        inputElement.value = method.name;
+                        this.dom.paymentMethodSuggestions.style.display = 'none';
+                        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+                    };
+                    this.dom.paymentMethodSuggestions.appendChild(bubble);
+                });
+                this.dom.paymentMethodSuggestions.style.display = 'block';
+            } else {
+                this.dom.paymentMethodSuggestions.style.display = 'none';
+            }
+        }
+
+        getCurrencySymbol(currencyCode = 'EUR') { return currencyCode === 'USD' ? '$' : '€'; }
+
+        updateClientFormCurrencyLabels(currencyCode) {
+            const symbol = this.getCurrencySymbol(currencyCode);
+            document.getElementById('totalAmountLabel').textContent = `Total Project Amount (${symbol})`;
+            document.getElementById('discountAmountLabel').textContent = `Special Discount Amount (${symbol})`;
+            document.getElementById('newPaymentAmountLabel').textContent = `Payment Amount (${symbol})`;
+            if (!this.dom.clientForm.clientId.value) this.updateLiveDueTipDisplay();
+        }
+
+        setupCustomNumberInputs() {
+            document.querySelectorAll('.number-input-wrapper').forEach(wrapper => {
+                const input = wrapper.querySelector('input[type="number"]');
+                const upArrow = wrapper.querySelector('.arrow-up');
+                const downArrow = wrapper.querySelector('.arrow-down');
+                let intervalId, timeoutId;
+
+                const changeValue = (direction) => {
+                    if (!input) return; const step = parseFloat(input.step) || 1;
+                    let currentValue = parseFloat(input.value) || 0;
+                    currentValue += direction === 'up' ? step : -step;
+                    const min = parseFloat(input.min); const max = parseFloat(input.max);
+                    if (!isNaN(min) && currentValue < min) currentValue = min;
+                    if (!isNaN(max) && currentValue > max) currentValue = max;
+                    const precision = input.step.includes('.') ? input.step.split('.')[1].length : 0;
+                    input.value = currentValue.toFixed(precision);
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+                const startChanging = (direction) => {
+                    stopChanging(); changeValue(direction);
+                    timeoutId = setTimeout(() => { intervalId = setInterval(() => changeValue(direction), 100); }, 500);
+                };
+                const stopChanging = () => { clearInterval(intervalId); clearTimeout(timeoutId); intervalId = null; timeoutId = null; };
+                [upArrow, downArrow].forEach(arrow => {
+                    if (arrow) {
+                        const direction = arrow.classList.contains('arrow-up') ? 'up' : 'down';
+                        arrow.addEventListener('mousedown', (e) => { e.preventDefault(); startChanging(direction); });
+                        arrow.addEventListener('mouseup', stopChanging);
+                        arrow.addEventListener('mouseleave', stopChanging);
+                    }
+                });
+            });
+        }
+        
+        calculateFee(amount, paymentMethodName) {
+            const method = this.predefinedPaymentMethods.find(m => m.name === paymentMethodName);
+            const clientCurrency = this.dom.clientCurrencySelect.value;
+
+            if (!method || !method.fee || amount <= 0) {
+                return { fee: 0, net: amount };
+            }
+
+            let flatFee = method.fee.flat || 0;
+            if (clientCurrency === 'USD' && flatFee > 0) {
+                flatFee *= this.conversionRates.EUR_USD;
+            } else if (clientCurrency === 'EUR' && flatFee > 0) {
+            }
+
+            const percentageFee = (amount * (method.fee.percentage || 0)) / 100;
+            const totalFee = percentageFee + flatFee;
+            const netAmount = amount - totalFee;
+            return { fee: totalFee, net: netAmount };
+        }
+
+        updateLiveDueTipDisplay() {
+            const formCurrency = this.dom.clientCurrencySelect.value;
+            const symbol = this.getCurrencySymbol(formCurrency);
+            const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
+            const discountAmount = parseFloat(document.getElementById('discountAmount').value) || 0;
+            const amountAfterDiscount = totalAmount - discountAmount;
+            let existingPaid = 0;
+            const clientId = this.dom.clientForm.clientId.value;
+            
+            if (clientId) {
+                const client = this.clients.find(c => c.id == clientId);
+                if (client) {
+                    existingPaid = this.getTotalPaid(client);
+                    const clientOriginalCurrency = client.currency;
+                    if (clientOriginalCurrency !== formCurrency) {
+                        const rateKey = `${clientOriginalCurrency}_${formCurrency}`;
+                        const conversionRate = this.conversionRates[rateKey] || 1;
+                        existingPaid *= conversionRate;
+                    }
+                }
+            }
+
+            const newPayment = parseFloat(document.getElementById('newPaymentAmount').value) || 0;
+            const prospectiveTotalPaid = existingPaid + newPayment;
+            this.dom.currentTotalPaidDisplay.textContent = `Paid: ${symbol}${prospectiveTotalPaid.toFixed(2)}`;
+
+            const paymentMethod = document.getElementById('newPaymentMethod').value;
+            const { fee, net } = this.calculateFee(newPayment, paymentMethod);
+
+            document.getElementById('paymentFeeDisplay').textContent = `Fee: ${symbol}${fee.toFixed(2)}`;
+            document.getElementById('paymentFeeDisplay').classList.toggle('due-amount-warning', fee > 0);
+            document.getElementById('paymentFeeDisplay').classList.toggle('due-amount-ok', fee <= 0);
+            document.getElementById('netPaymentDisplay').textContent = `Net: ${symbol}${net.toFixed(2)}`;
+
+            let due = amountAfterDiscount - prospectiveTotalPaid;
+            if (due < -0.001) { this.dom.currentTotalDueDisplay.textContent = `Tip: ${symbol}${Math.abs(due).toFixed(2)}`; this.dom.currentTotalDueDisplay.className = 'tip-amount';
+            } else if (due > 0.001) { this.dom.currentTotalDueDisplay.textContent = `Due: ${symbol}${due.toFixed(2)}`; this.dom.currentTotalDueDisplay.className = 'due-amount-warning';
+            } else { this.dom.currentTotalDueDisplay.textContent = `Due: ${symbol}0.00`; this.dom.currentTotalDueDisplay.className = 'due-amount-ok'; }
+        }
+        
+        handleClientCurrencyChange(newCurrency) {
+            const oldCurrency = this.dom.clientForm.dataset.previousCurrency || this.dom.clientCurrencySelect.value;
+            this.updateClientFormCurrencyLabels(newCurrency);
+            const totalAmountInput = document.getElementById('totalAmount');
+            let currentTotalAmountOnForm = parseFloat(totalAmountInput.value);
+            const discountAmountInput = document.getElementById('discountAmount');
+            let currentDiscountAmountOnForm = parseFloat(discountAmountInput.value);
+
+            if (oldCurrency !== newCurrency) {
+                const rateKey = `${oldCurrency}_${newCurrency}`;
+                const conversionRate = this.conversionRates[rateKey] || 1;
+                if (!isNaN(currentTotalAmountOnForm)) totalAmountInput.value = (currentTotalAmountOnForm * conversionRate).toFixed(2);
+                if (!isNaN(currentDiscountAmountOnForm)) discountAmountInput.value = (currentDiscountAmountOnForm * conversionRate).toFixed(2);
+            }
+            this.dom.clientForm.dataset.previousCurrency = newCurrency;
+            this.updateLiveDueTipDisplay();
+        }
+
+        handleScroll() { this.dom.logoContainer.classList.toggle('scrolled', window.scrollY > 50); }
+        getTotalPaid(client) { return (client.payments || []).reduce((sum, p) => sum + parseFloat(p.amount || 0), 0); }
+        getPaymentStatus(amountAfterDiscount, totalPaid) {
+            if (totalPaid <= 0.001) return 'Not Paid';
+            if (totalPaid < amountAfterDiscount - 0.001) return 'Partially Paid';
+            return 'Paid';
+        }
+
+        createClientCardHTML(client) {
+            const clientCurrencySymbol = this.getCurrencySymbol(client.currency); const totalPaid = this.getTotalPaid(client);
+            const totalAmount = parseFloat(client.totalAmount || 0); const discountAmount = parseFloat(client.discountAmount || 0);
+            const amountAfterDiscount = totalAmount - discountAmount; let dueAmount = amountAfterDiscount - totalPaid;
+            const paymentStatus = this.getPaymentStatus(amountAfterDiscount, totalPaid); const statusClass = client.status.toLowerCase().replace(/ /g, '-');
+            let dueOrTipLabel = "Due", dueOrTipClass = "amount-due", dueOrTipAmountDisplay = `${clientCurrencySymbol}${dueAmount.toFixed(2)}`;
+            if (dueAmount < -0.001) { dueOrTipLabel = "Tip"; dueOrTipClass = "tip-amount"; dueOrTipAmountDisplay = `${clientCurrencySymbol}${Math.abs(dueAmount).toFixed(2)}`; }
+            const discountHTML = discountAmount > 0 ? `<div class="stat-item"><h4>Discount</h4><p style="color: var(--warning-color);">${clientCurrencySymbol}${discountAmount.toFixed(2)}</p></div>` : '';
+            const totalFees = (client.payments || []).reduce((sum, p) => sum + (p.fee || 0), 0);
+            const feesHTML = totalFees > 0 ? `<div class="stat-item"><h4>Platform Fees</h4><p class="amount-due">${clientCurrencySymbol}${totalFees.toFixed(2)}</p></div>` : '';
+            const finalAmountHTML = discountAmount > 0 ? `<div class="stat-item"><h4>Original Total</h4><p>${clientCurrencySymbol}${totalAmount.toFixed(2)}</p></div><div class="stat-item"><h4>Final Total</h4><p>${clientCurrencySymbol}${amountAfterDiscount.toFixed(2)}</p></div>` : `<div class="stat-item"><h4>Total</h4><p>${clientCurrencySymbol}${totalAmount.toFixed(2)}</p></div>`;
+            const deadlineHTML = client.deadline ? `<div class="stat-item"><h4>Deadline</h4><p>${client.deadline}</p></div>` : '';
+            const projectDatesHTML = [];
+            if (client.projectStartDate) projectDatesHTML.push(`<div class="stat-item"><h4>Started</h4><p>${client.projectStartDate}</p></div>`);
+            if (client.projectFinishDate) projectDatesHTML.push(`<div class="stat-item"><h4>Finished</h4><p>${client.projectFinishDate}</p></div>`);
+
+            return `<div class="client-card glass-ui" data-id="${client.id}"><div class="shine-overlay"></div><div class="client-header"><div class="client-name-block"><span class="client-name">${client.name}</span>${client.projectDescription ? `<p class="project-description">${client.projectDescription}</p>` : ''}</div><span class="client-status status-${statusClass}">${client.status}</span></div><div class="stat-grid">${finalAmountHTML}${discountHTML}${feesHTML}<div class="stat-item"><h4>Paid</h4><p class="amount-paid">${clientCurrencySymbol}${totalPaid.toFixed(2)}</p></div><div class="stat-item"><h4>${dueOrTipLabel}</h4><p class="${dueOrTipClass}">${dueOrTipAmountDisplay}</p></div><div class="stat-item"><h4>Payment Status</h4><p>${paymentStatus}</p></div>${deadlineHTML}${projectDatesHTML.join('')}</div><div class="client-notes">${client.notes || 'No general notes.'}</div><div class="card-actions"><button class="card-btn edit" data-action="edit">Edit</button><button class="card-btn delete" data-action="delete">Delete</button></div></div>`;
+        }
+        
+        handleCardHover(e) {
+            const card = e.target.closest('.client-card, .card-clone');
+            if (!card) return;
+            const shineOverlay = card.querySelector('.shine-overlay');
+            if (!shineOverlay || shineOverlay.style.animationName) return; 
+            const randomDuration = (Math.random() * 0.4 + 0.8).toFixed(2);
+            const randomDirection = Math.random() > 0.5 ? 'shine-ltr' : 'shine-rtl';
+            shineOverlay.style.animation = `${randomDirection} ${randomDuration}s ease-in-out`;
+            shineOverlay.addEventListener('animationend', () => { shineOverlay.style.animation = ''; }, { once: true });
+        }
+
+        expandCard(cardElement) {
+            if (this.dom.modalOverlay.querySelector('.card-clone')) return;
+
+            const originalRect = cardElement.getBoundingClientRect();
+            const clone = cardElement.cloneNode(true);
+            clone.classList.add('card-clone');
+            clone.querySelector('.card-actions')?.remove();
+            
+            clone.style.top = `${originalRect.top}px`;
+            clone.style.left = `${originalRect.left}px`;
+            clone.style.width = `${originalRect.width}px`;
+            clone.style.height = `${originalRect.height}px`;
+
+            const expandedActions = document.createElement('div');
+            expandedActions.className = 'expanded-card-actions';
+            const generateBtn = document.createElement('button');
+            generateBtn.className = 'btn-primary';
+            generateBtn.textContent = 'Generate Receipt';
+            generateBtn.onclick = () => this.showPrintPreview('client', cardElement.dataset.id);
+            expandedActions.appendChild(generateBtn);
+            clone.appendChild(expandedActions);
+            
+            const client = this.clients.find(c => c.id == cardElement.dataset.id);
+            if (client?.payments?.length > 0) {
+                const clientCurrencySymbol = this.getCurrencySymbol(client.currency);
+                const paymentsDiv = document.createElement('div');
+                paymentsDiv.style.marginTop = '20px';
+                paymentsDiv.innerHTML = '<h4>Payment History:</h4>';
+                const table = document.createElement('table');
+                table.className = 'payment-history-table';
+                table.innerHTML = `<thead><tr><th>Date</th><th style="text-align: right;">Gross</th><th style="text-align: right;">Fee</th><th style="text-align: right;">Net</th><th>Method</th><th>Note</th></tr></thead><tbody></tbody>`;
+                const tbody = table.querySelector('tbody');
+                client.payments.forEach(p => {
+                    const row = tbody.insertRow();
+                    const grossAmount = parseFloat(p.amount || 0);
+                    const fee = parseFloat(p.fee || 0);
+                    const netAmount = grossAmount - fee;
+
+                    row.insertCell().textContent = p.date;
+                    
+                    const grossCell = row.insertCell();
+                    grossCell.textContent = `${clientCurrencySymbol}${grossAmount.toFixed(2)}`;
+                    grossCell.style.textAlign = 'right';
+
+                    const feeCell = row.insertCell();
+                    feeCell.textContent = `${clientCurrencySymbol}${fee.toFixed(2)}`;
+                    feeCell.style.textAlign = 'right';
+                    if (fee > 0) feeCell.style.color = 'var(--warning-color)';
+
+                    const netCell = row.insertCell();
+                    netCell.textContent = `${clientCurrencySymbol}${netAmount.toFixed(2)}`;
+                    netCell.style.textAlign = 'right';
+                    netCell.style.color = 'var(--success-color)';
+                    
+                    const methodCell = row.insertCell();
+                    const methodData = this.predefinedPaymentMethods.find(m => m.name === p.paymentMethod);
+                    methodCell.innerHTML = `<div class="payment-method-cell">${methodData ? `<img src="${methodData.icon}" class="payment-icon" alt="${p.paymentMethod}">` : ''}<span>${p.paymentMethod || 'N/A'}</span></div>`;
+                    
+                    row.insertCell().textContent = p.note || (p.amount > 0 ? "Payment added" : "");
+                });
+                paymentsDiv.appendChild(table);
+                clone.querySelector('.client-notes')?.parentNode.insertBefore(paymentsDiv, clone.querySelector('.client-notes'));
+            }
+
+            this.dom.modalOverlay.innerHTML = '';
+            this.dom.modalOverlay.appendChild(clone);
+            this.dom.clientGrid.classList.add('modal-open');
+            cardElement.classList.add('original-card'); 
+            this.dom.modalOverlay.classList.add('visible'); 
+
+            requestAnimationFrame(() => {
+                const targetWidth = Math.min(window.innerWidth * 0.8, 700);
+                clone.style.top = '50%';
+                clone.style.left = '50%';
+                clone.style.width = `${targetWidth}px`;
+                clone.style.minHeight = `${originalRect.height}px`;
+                clone.style.height = 'auto'; 
+                clone.style.transform = `translate(-50%, -50%)`;
+            });
+        }
+        
+        closeExpandedCard() {
+            const clone = this.dom.modalOverlay.querySelector('.card-clone');
+            if (!clone) return;
+        
+            const originalCard = this.dom.clientGrid.querySelector('.original-card');
+            
+            this.dom.modalOverlay.classList.remove('visible');
+        
+            if (originalCard && getComputedStyle(originalCard).display !== 'none') {
+                const originalRect = originalCard.getBoundingClientRect();
+                clone.style.top = `${originalRect.top}px`;
+                clone.style.left = `${originalRect.left}px`;
+                clone.style.width = `${originalRect.width}px`;
+                clone.style.height = `${originalRect.height}px`;
+                clone.style.transform = `translate(0, 0) scale(1)`;
+                clone.style.opacity = '0';
+        
+                clone.addEventListener('transitionend', () => {
+                    if (clone.parentNode) clone.remove();
+                    originalCard.classList.remove('original-card');
+                    this.dom.clientGrid.classList.remove('modal-open');
+                    this.dom.modalOverlay.innerHTML = ''; 
+                }, { once: true });
+            } else {
+                clone.style.opacity = '0';
+                clone.style.transform = 'translate(-50%, -50%) scale(0.9)';
+                setTimeout(() => {
+                    if (clone.parentNode) clone.remove();
+                    this.dom.clientGrid.classList.remove('modal-open');
+                    if (originalCard) originalCard.classList.remove('original-card');
+                    this.dom.modalOverlay.innerHTML = '';
+                }, 500); 
+            }
+        }
+
+        editClient(id) {
+            const client = this.clients.find(c => c.id == id);
+            if (!client) return;
+            this.dom.clientForm.reset();
+            document.getElementById('clientId').value = client.id;
+            const clientCurrency = client.currency || 'EUR';
+            this.dom.clientCurrencySelect.value = clientCurrency;
+            this.dom.clientForm.dataset.previousCurrency = clientCurrency;
+            this.dom.clientForm.dataset.initialCurrencyForEdit = clientCurrency;
+            this.updateClientFormCurrencyLabels(clientCurrency); 
+            document.getElementById('clientName').value = client.name;
+            document.getElementById('projectDescription').value = client.projectDescription || '';
+            document.getElementById('clientStatus').value = client.status;
+            document.getElementById('totalAmount').value = client.totalAmount;
+            document.getElementById('discountAmount').value = client.discountAmount || 0; 
+            document.getElementById('projectStartDate').value = client.projectStartDate || '';
+            document.getElementById('projectFinishDate').value = client.projectFinishDate || '';
+            document.getElementById('deadline').value = client.deadline || '';
+            document.getElementById('clientNotes').value = client.notes;
+            this.updateLiveDueTipDisplay(); 
+            this.dom.formTitle.textContent = "Edit Client";
+            this.dom.submitBtn.textContent = "Update Client";
+            this.togglePanel('form-panel', true);
+        }
+
+        async handleFormSubmit(e) { 
+            e.preventDefault();
+            if (this.animationLock) return;
+            
+            const id = document.getElementById('clientId').value;
+            const finalClientCurrency = this.dom.clientCurrencySelect.value;
+            let clientData = { id: id || Date.now().toString(), currency: finalClientCurrency, name: document.getElementById('clientName').value, projectDescription: document.getElementById('projectDescription').value, status: document.getElementById('clientStatus').value, totalAmount: parseFloat(document.getElementById('totalAmount').value) || 0, discountAmount: parseFloat(document.getElementById('discountAmount').value) || 0, deadline: document.getElementById('deadline').value, projectStartDate: document.getElementById('projectStartDate').value, projectFinishDate: document.getElementById('projectFinishDate').value, notes: document.getElementById('clientNotes').value };
+            const newPaymentAmount = parseFloat(document.getElementById('newPaymentAmount').value) || 0;
+            const newPaymentMethod = this.dom.newPaymentMethodInput.value.trim();
+            let newPaymentNote = document.getElementById('newPaymentNote').value.trim();
+            if (newPaymentAmount > 0 && newPaymentNote === "") newPaymentNote = "Payment added";
+            
+            let targetClient;
+            if (id) {
+                const index = this.clients.findIndex(c => c.id == id);
+                if (index !== -1) {
+                    targetClient = this.clients[index];
+                    clientData.payments = targetClient.payments;
+                    this.clients[index] = clientData;
+                }
+            } else {
+                clientData.payments = [];
+                this.clients.push(clientData);
+            }
+            targetClient = this.clients.find(c => c.id == clientData.id);
+
+            if (targetClient && newPaymentAmount > 0) {
+                 if (!targetClient.payments) targetClient.payments = [];
+                const { fee } = this.calculateFee(newPaymentAmount, newPaymentMethod);
+                targetClient.payments.push({ date: new Date().toISOString().slice(0,10), amount: newPaymentAmount, paymentMethod: newPaymentMethod || 'N/A', note: newPaymentNote, fee: fee });
+            }
+
+            this.saveData('xcm_clients', this.clients);
+            this.updateEarningsWidget();
+            this.togglePanel('form-panel', false);
+            await this.renderCurrentView(true);
+        }
+
+        async handleFilterButtonClick(e) {
+            if (this.animationLock) return;
+            const button = e.target.closest('.filter-btn');
+            if (!button || button.classList.contains('active')) return;
+        
+            this.animationLock = true;
+            try {
+                const { filter, value } = button.dataset;
+                this.activeFilters[filter] = value;
+                
+                const group = button.parentElement;
+                group.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+        
+                const cards = Array.from(this.dom.clientGrid.querySelectorAll('.client-card'));
+                if (cards.length > 0) {
+                    const animationPromises = cards.map((card, index) => new Promise(resolve => {
+                        card.style.animationDelay = `${index * 25}ms`; 
+                        card.classList.add('card-disappear-animation');
+                        const onEnd = () => resolve();
+                        card.addEventListener('animationend', onEnd, { once: true });
+                        setTimeout(onEnd, 500); 
+                    }));
+                    await Promise.all(animationPromises);
+                }
+                this.renderCurrentView(true); 
+            } finally {
+                this.animationLock = false;
+            }
+        }
+
+        loadData(key, fallback = null) { try { const data = localStorage.getItem(key); return data ? JSON.parse(data) : fallback; } catch (e) { return fallback; } }
+        saveData(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}}
+        
+        applyTheme() {
+            Object.entries(this.theme).forEach(([key, value]) => {
+                document.documentElement.style.setProperty(key, value);
+                if (key === '--primary-accent') {
+                    document.documentElement.style.setProperty('--primary-accent-rgb', this.hexToRgbCss(value));
+                }
+            });
+            this.updateThemePickers();
+            this.updateFavicon();
+        }
+
+        updateThemePickers() {
+            document.getElementById('primaryColorInput').value = this.theme['--primary-accent'];
+            document.getElementById('secondaryColorInput').value = this.theme['--secondary-accent'];
+            document.getElementById('outlineColorInput').value = this.theme['--outline-color'];
+            document.getElementById('textColorInput').value = this.theme['--text-color'];
+            document.getElementById('textMutedInput').value = this.theme['--text-muted'];
+            document.getElementById('bgColorInput').value = this.theme['--bg-color'];
+        }
+
+        renderCurrentView() {
+            this.dom.clientGrid.innerHTML = '';
+            let sortedClients = [...this.clients].sort((a, b) => b.id - a.id);
+
+            if (this.activeSearchTerm) {
+                const lowercasedTerm = this.activeSearchTerm.toLowerCase();
+                sortedClients = sortedClients.filter(client =>
+                    client.name.toLowerCase().includes(lowercasedTerm) ||
+                    (client.projectDescription || '').toLowerCase().includes(lowercasedTerm)
+                );
+            }
+
+            const filtered = sortedClients.filter(c => {
+                const totalPaid = this.getTotalPaid(c);
+                const amountAfterDiscount = (c.totalAmount || 0) - (c.discountAmount || 0);
+                const paymentStatusFilter = this.getPaymentStatus(amountAfterDiscount, totalPaid);
+                return (this.activeFilters.status === 'all' || c.status === this.activeFilters.status) && (this.activeFilters.payment === 'all' || paymentStatusFilter === this.activeFilters.payment);
+            });
+
+            if (filtered.length === 0) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'add-placeholder glass-ui';
+                if (this.clients.length === 0) {
+                    placeholder.innerHTML = `<i class="fas fa-plus"></i><h3>No Clients Yet</h3><p>Click the '+' in the dock to add your first client.</p>`;
+                } else {
+                    placeholder.innerHTML = `<i class="fas fa-sliders-h"></i><h3>No Clients Match Filters</h3><p>Try adjusting your filters or add more clients.</p>`;
+                }
+                this.dom.clientGrid.appendChild(placeholder);
+            } else {
+                filtered.forEach(client => { this.dom.clientGrid.insertAdjacentHTML('beforeend', this.createClientCardHTML(client)); });
+            }
+
+            const newCards = Array.from(this.dom.clientGrid.querySelectorAll('.client-card'));
+            newCards.forEach((card, index) => {
+                card.style.opacity = 0;
+                card.style.animation = `cardFilterInSharper 0.3s ${index * 30}ms forwards cubic-bezier(0.34, 1.56, 0.64, 1)`;
+                card.addEventListener('animationend', () => { card.style.opacity = ''; card.style.animation = ''; }, { once: true });
+            });
+        }
+        
+        handleCardActions(e, type) {
+            const cardBtn = e.target.closest('.card-btn'); 
+            if (cardBtn) { e.stopPropagation(); this.handleCardButtonClick(cardBtn, type); return; } 
+            
+            const placeholder = e.target.closest('.add-placeholder');
+            if (placeholder) { this.resetForm(); this.togglePanel('form-panel', true); return; } 
+            
+            const card = e.target.closest('.client-card');
+            if (card && !card.classList.contains('card-clone')) { this.expandCard(card); } 
+        }
+
+        handleCardButtonClick(button, type) {
+            const card = button.closest(`.${type}-card`); 
+            const cardId = card.dataset.id; 
+            const action = button.dataset.action; 
+            if (action === 'edit') this.editClient(cardId);
+            else if (action === 'delete') this.deleteClient(cardId);
+        }
+
+        updateDock() {
+            document.getElementById('addBtn').classList.toggle('active', this.dom.formPanel.classList.contains('visible'));
+            document.getElementById('listBtn').classList.toggle('active', this.dom.clientListPanel.classList.contains('visible'));
+            document.getElementById('themeBtn').classList.toggle('active', this.dom.themePanel.classList.contains('visible'));
+        }
+        
+        async handleDockClick(e) {
+            const target = e.target.closest('.dock-item');
+            if (!target) return;
+        
+            switch(target.id) {
+                case 'addBtn':
+                    this.resetForm(); this.togglePanel('form-panel', true);
+                    break;
+                case 'listBtn':
+                    this.renderClientList(); this.togglePanel('client-list-panel', true);
+                    break;
+                case 'themeBtn':
+                    this.togglePanel('theme-panel');
+                    break;
+            }
+            this.updateDock(); 
+        }
+
+        togglePanel(panelId, forceState) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+
+            const show = forceState !== undefined ? forceState : !panel.classList.contains('visible');
+            panel.classList.toggle('visible', show);
+
+            const isFormVisible = this.dom.formPanel.classList.contains('visible');
+            const isListVisible = this.dom.clientListPanel.classList.contains('visible');
+            
+            this.dom.container.classList.toggle('panel-open-blur', isFormVisible || isListVisible);
+
+            if (show && panel.querySelector('.panel-content')) {
+                panel.querySelector('.panel-content').scrollTop = 0;
+            }
+            this.updateDock();
+        }
+        
+        resetForm() {
+            this.dom.clientForm.reset(); document.getElementById('clientId').value = '';
+            this.dom.clientCurrencySelect.value = 'EUR';
+            this.updateClientFormCurrencyLabels('EUR'); this.dom.formTitle.textContent = "Add New Client"; this.dom.submitBtn.textContent = "Add Client"; this.updateLiveDueTipDisplay();
+        }
+        async deleteClient(id) { if (confirm("Are you sure?")) { this.clients = this.clients.filter(c => c.id != id); this.saveData('xcm_clients', this.clients); await this.renderCurrentView(true); this.updateEarningsWidget(); } }
+        
+        exportData() {
+            if (this.clients.length === 0 && !this.username) return alert('No data to export.');
+            const exportObject = {
+                username: this.username,
+                clients: this.clients
+            };
+            const dataStr = JSON.stringify(exportObject, null, 2);
+            const blob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `xcm_config_${new Date().toISOString().slice(0,10)}.xan`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async importData(event) { 
+            const file = event.target.files[0]; if (!file) return; 
+            const reader = new FileReader(); 
+            reader.onload = async e_reader => { 
+                try { 
+                    const data = JSON.parse(e_reader.target.result); 
+                    let importedClients = [];
+                    let importedUsername = null;
+                    if (Array.isArray(data)) {
+                        importedClients = data;
+                    } else if (data && typeof data === 'object' && Array.isArray(data.clients)) {
+                        importedClients = data.clients;
+                        importedUsername = data.username || null;
+                    } else {
+                        alert('Invalid data file format.'); return;
+                    }
+
+                    if (importedClients.every(item => item.id && item.name)) { 
+                        let confirmMessage = "This will overwrite current client data.";
+                        if (importedUsername) confirmMessage += " It will also update your username.";
+                        confirmMessage += " Continue?";
+
+                        if (confirm(confirmMessage)) { 
+                            this.clients = importedClients.map(c => ({ ...c, currency: c.currency || 'EUR', discountAmount: parseFloat(c.discountAmount || 0), payments: (c.payments || []).map(p => ({...p, paymentMethod: p.paymentMethod || 'N/A', fee: p.fee || 0})) }));
+                            this.saveData('xcm_clients', this.clients); 
+                            
+                            if (importedUsername) {
+                                this.username = importedUsername;
+                                this.saveData('xcm_username', this.username);
+                                this.updatePaperLogo(this.dom.paperLogo, this.username);
+                            }
+
+                            this.updateEarningsWidget();
+                            await this.renderCurrentView(true);
+                        } 
+                    } else alert('Invalid client data structure in file.'); 
+                } catch(err) { alert('Failed to parse file.'); } 
+            }; 
+            reader.readAsText(file); event.target.value = ''; 
+        }
+
+        handleThemeChange(e) { const propMap = { primaryColorInput: '--primary-accent', secondaryColorInput: '--secondary-accent', outlineColorInput: '--outline-color', textColorInput: '--text-color', textMutedInput: '--text-muted', bgColorInput: '--bg-color', }; const cssVar = propMap[e.target.id]; if(cssVar) { this.theme[cssVar] = e.target.value; this.applyTheme(); this.saveData('xcm_theme_settings', this.theme); } }
+        
+        resetTheme() {
+            if (confirm("Reset to default theme?")) {
+                this.theme = JSON.parse(JSON.stringify(this.defaultTheme));
+                this.applyTheme();
+                this.saveData('xcm_theme_settings', this.theme);
+            }
+        }
+
+        hexToRgbCss(hex) { if(!hex || !hex.startsWith('#')) return '0, 191, 255'; const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0, 191, 255'; }
+        
+        saveCurrentTheme() {
+            const themeName = prompt("Enter theme name:", `Theme ${this.savedThemes.length + 1}`);
+            if (!themeName || themeName.trim() === "" || themeName.trim() === 'Default') return;
+            const themeToSave = JSON.parse(JSON.stringify(this.theme));
+            this.savedThemes.push({ name: themeName.trim(), settings: themeToSave });
+            this.saveData('xcm_saved_themes', this.savedThemes);
+            this.renderSavedThemes();
+        }
+
+        renderSavedThemes() {
+            this.dom.savedThemesList.innerHTML = '<h4>Saved Themes:</h4>';
+            if (!this.savedThemes.find(t => t.name === 'Default')) {
+                this.savedThemes.unshift({ name: 'Default', settings: JSON.parse(JSON.stringify(this.defaultTheme)) });
+                this.saveData('xcm_saved_themes', this.savedThemes);
+            }
+            
+            if (this.savedThemes.length === 0) {
+                 this.dom.savedThemesList.innerHTML += '<p style="font-size:0.9rem; color:var(--text-muted);">No themes saved.</p>';
+                 return;
+            }
+
+            this.savedThemes.forEach((savedTheme, index) => {
+                const themeDiv = document.createElement('div');
+                themeDiv.className = 'saved-theme-item';
+                themeDiv.innerHTML = `<div class="swatch" style="background-color: ${savedTheme.settings['--primary-accent']};"></div><span class="name">${savedTheme.name}</span><div class="actions"><button class="load-btn" title="Load Theme"><i class="fas fa-check"></i></button>${savedTheme.name !== 'Default' ? `<button class="delete-btn" title="Delete Theme"><i class="fas fa-trash"></i></button>` : ''}</div>`;
+                themeDiv.querySelector('.load-btn').onclick = () => { this.theme = JSON.parse(JSON.stringify(savedTheme.settings)); this.applyTheme(); this.saveData('xcm_theme_settings', this.theme); };
+                if (savedTheme.name !== 'Default') {
+                    themeDiv.querySelector('.delete-btn').onclick = () => { if (confirm(`Delete theme "${savedTheme.name}"?`)) { this.savedThemes.splice(index, 1); this.saveData('xcm_saved_themes', this.savedThemes); this.renderSavedThemes(); } };
+                }
+                this.dom.savedThemesList.appendChild(themeDiv);
+            });
+        }
+        
+        updateFavicon() {
+            const color = this.theme['--primary-accent'];
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            const image = new Image();
+            image.crossOrigin = 'Anonymous';
+            image.onload = () => {
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, 32, 32);
+                ctx.globalCompositeOperation = 'destination-in';
+                ctx.drawImage(image, 0, 0, 32, 32);
+                const link = document.getElementById('favicon');
+                if (link) {
+                    link.href = canvas.toDataURL('image/png');
+                }
+            };
+            image.src = 'https://i.imgur.com/rwqqhb6.png';
+        }
+
+        updateEarningsWidget() {
+            const totals = this.clients.reduce((acc, client) => {
+                const currency = client.currency || 'EUR';
+                const totalPaid = this.getTotalPaid(client);
+                const totalFees = (client.payments || []).reduce((sum, p) => sum + (p.fee || 0), 0);
+                if (!acc[currency]) acc[currency] = 0;
+                acc[currency] += (totalPaid - totalFees);
+                return acc;
+            }, { EUR: 0, USD: 0 });
+
+            this.dom.earningsEur.textContent = `€${(totals.EUR || 0).toFixed(2)}`;
+            this.dom.earningsUsd.textContent = `$${(totals.USD || 0).toFixed(2)}`;
+
+            const totalInEur = (totals.EUR || 0) + ((totals.USD || 0) * this.conversionRates.USD_EUR);
+            const totalInUsd = (totals.USD || 0) + ((totals.EUR || 0) * this.conversionRates.EUR_USD);
+
+            this.dom.earningsCombinedEur.textContent = `€${totalInEur.toFixed(2)}`;
+            this.dom.earningsCombinedUsd.textContent = `$${totalInUsd.toFixed(2)}`;
+        }
+
+        renderClientList(searchTerm = '') {
+            const lowercasedTerm = searchTerm.toLowerCase();
+            const sortedClients = [...this.clients].sort((a,b) => b.id - a.id);
+            const filteredClients = sortedClients.filter(client => 
+                client.name.toLowerCase().includes(lowercasedTerm) || 
+                (client.projectDescription || '').toLowerCase().includes(lowercasedTerm)
+            );
+
+            this.dom.clientList.innerHTML = '';
+            if(filteredClients.length > 0) {
+                filteredClients.forEach(client => {
+                    const item = document.createElement('div');
+                    item.className = 'client-list-item';
+                    item.dataset.clientId = client.id;
+                    item.innerHTML = `<h5>${client.name}</h5><p>${client.projectDescription || 'No description'}</p>`;
+                    item.onclick = () => {
+                        this.togglePanel('client-list-panel', false);
+                        const card = this.dom.clientGrid.querySelector(`.client-card[data-id="${client.id}"]`);
+                        if (card) {
+                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            card.classList.add('highlight');
+                            setTimeout(() => card.classList.remove('highlight'), 1200);
+                        }
+                    };
+                    this.dom.clientList.appendChild(item);
+                });
+            } else {
+                this.dom.clientList.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No clients found.</p>';
+            }
+        }
+        
+        async showPrintPreview(type, id) {
+            let item = this.clients.find(c => c.id == id);
+            if (!item) return;
+            const htmlContent = this.generateClientReceiptHTML(item);
+            this.dom.printPreviewArea.innerHTML = htmlContent;
+            this.dom.printPreviewModal.classList.add('visible');
+            this.dom.printPreviewArea.querySelector('.download-btn').onclick = () => this.generatePrintableImage(type, item.name, 'download');
+            this.dom.printPreviewArea.querySelector('.copy-btn').onclick = () => this.generatePrintableImage(type, item.name, 'copy');
+            this.dom.printPreviewArea.querySelector('.cancel-btn').onclick = () => this.dom.printPreviewModal.classList.remove('visible');
+        }
+
+        generateClientReceiptHTML(client) {
+            const clientCurrencySymbol = this.getCurrencySymbol(client.currency); const totalPaid = this.getTotalPaid(client); const totalAmount = parseFloat(client.totalAmount || 0); const discountAmount = parseFloat(client.discountAmount || 0); const amountAfterDiscount = totalAmount - discountAmount; let dueAmount = amountAfterDiscount - totalPaid;
+            let dueOrTipLabel = "Amount Due", dueOrTipClass = "receipt-warning", dueOrTipAmountDisplay = `${clientCurrencySymbol}${dueAmount.toFixed(2)}`;
+            if (dueAmount < -0.001) { dueOrTipLabel = "Tip Amount"; dueOrTipClass = "receipt-success"; dueOrTipAmountDisplay = `${clientCurrencySymbol}${Math.abs(dueAmount).toFixed(2)}`; } else if (dueAmount <= 0.001) { dueOrTipClass = "receipt-success"; }
+            let paymentsHTML = `<tr><td colspan="4" style="text-align:center;">No payments logged.</td></tr>`;
+            if (client.payments?.length > 0) { paymentsHTML = client.payments.map(p => { 
+                const note = p.note || (p.amount > 0 ? "Payment added" : ""); 
+                const methodData = this.predefinedPaymentMethods.find(m => m.name === p.paymentMethod);
+                const methodDisplay = methodData ? `<img src="${methodData.icon}" class="payment-icon-print" alt="">${p.paymentMethod}` : p.paymentMethod || 'N/A';
+                return `<tr><td>${p.date}</td><td class="amount" style="text-align: right;">${clientCurrencySymbol}${parseFloat(p.amount || 0).toFixed(2)}</td><td>${methodDisplay}</td><td>${note}</td></tr>`}).join(''); 
+            }
+            const discountRowHTML = discountAmount > 0 ? `<p class="print-total receipt-warning"><span>Discount Applied:</span><span>-${clientCurrencySymbol}${discountAmount.toFixed(2)}</span></p>` : '';
+            const originalTotalRowHTML = discountAmount > 0 ? `<p class="print-total"><span>Original Total:</span><span>${clientCurrencySymbol}${totalAmount.toFixed(2)}</span></p>` : '';
+            return `<div class="print-preview-render-area"><div class="print-preview-header"><div class="print-preview-logo">${this.username || ''}</div><h2>Client Receipt</h2></div><div class="print-section"><h3>Client Details</h3><p><strong>Name:</strong> ${client.name}</p>${client.projectDescription ? `<p><strong>Project:</strong> ${client.projectDescription}</p>` : ''}</div><div class="print-section"><h3>Payment Details</h3><table class="print-table"><thead><tr><th>Date</th><th style="text-align: right;">Amount</th><th>Method</th><th>Note</th></tr></thead><tbody>${paymentsHTML}</tbody></table><div class="print-total-section">${originalTotalRowHTML}${discountRowHTML}<p class="print-total"><span>Final Project Amount:</span><span>${clientCurrencySymbol}${amountAfterDiscount.toFixed(2)}</span></p><p class="print-total receipt-success"><span>Total Paid:</span><span>${clientCurrencySymbol}${totalPaid.toFixed(2)}</span></p><p class="print-total ${dueOrTipClass}"><span>${dueOrTipLabel}:</span><span>${dueOrTipAmountDisplay}</span></p></div></div></div><div class="print-actions"><button class="download-btn">Download</button><button class="copy-btn">Copy Image</button><button class="cancel-btn">Close</button></div>`;
+        }
+        
+        async generatePrintableImage(type, name, action) {
+            const originalContent = this.dom.printPreviewArea.querySelector('.print-preview-render-area');
+            if (!originalContent) return;
+            const offscreenClone = originalContent.cloneNode(true);
+            offscreenClone.style.cssText = `position:absolute; top:-9999px; left:-9999px; z-index:-1; width:600px; background:#f0f0f0; border-radius: var(--border-radius); overflow: hidden;`;
+            
+            const originalElements = Array.from(originalContent.querySelectorAll('*'));
+            const cloneElements = Array.from(offscreenClone.querySelectorAll('*'));
+
+            originalElements.forEach((origEl, index) => {
+                const cloneEl = cloneElements[index];
+                const computedStyle = getComputedStyle(origEl);
+                const propsToCopy = ['color', 'backgroundColor', 'borderBottomColor', 'borderBottomWidth', 'borderBottomStyle', 'border', 'borderRadius', 'fontWeight', 'textDecoration', 'fontSize', 'fontFamily', 'letterSpacing', 'textTransform', 'textAlign', 'verticalAlign', 'padding', 'margin'];
+                propsToCopy.forEach(prop => { cloneEl.style[prop] = computedStyle[prop]; });
+            });
+            
+            document.body.appendChild(offscreenClone);
+            await new Promise(r => setTimeout(r, 50));
+            
+            try {
+                const canvas = await html2canvas(offscreenClone, { scale: 2, useCORS: true, backgroundColor: '#f0f0f0' });
+                if (action === 'download') {
+                    const link = document.createElement('a');
+                    link.download = `${type}_${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                } else if (action === 'copy') {
+                    canvas.toBlob(async blob => {
+                        try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); alert('Image copied to clipboard!'); }
+                        catch (err) { alert('Failed to copy. Try downloading.'); }
+                    }, 'image/png');
+                }
+            } catch (err) { alert('Image generation failed.'); } 
+            finally { document.body.removeChild(offscreenClone); }
+        }
+    } 
+    window.clientManager = new ClientManager();
+});
+    </script>
+</body>
+</html>
